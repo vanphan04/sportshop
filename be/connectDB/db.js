@@ -1,19 +1,9 @@
-const mysql = require("mysql2");
+require("dotenv").config();
+const { Pool } = require("pg");
 
-const connection = mysql.createConnection({
-  host: "localhost",       
-  user: "root",            
-  password: "",            
-  database: "sportshop",
-  port: 3306               
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
 });
 
-connection.connect((err) => {
-  if (err) {
-    console.error("Lỗi kết nối:", err);
-  } else {
-    console.log("Kết nối thành công!");
-  }
-});
-
-module.exports = connection;
+module.exports = pool;

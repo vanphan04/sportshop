@@ -1,76 +1,91 @@
 const express = require("express");
 const cors = require("cors");
-const db = require("./connectDB/db");
+const db = require("./connectDB/db"); // dùng Pool (pg)
 const path = require("path");
 const axios = require("axios");
 const crypto = require("crypto");
-const connection = require("./connectDB/db");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-//folder chứa ảnh
+// folder chứa ảnh
 app.use("/images", express.static(path.join(__dirname, "public/images")));
 
-//login
+// login
 const bcrypt = require("bcrypt");
-const { url } = require("inspector");
 
-app.post("/api/admin/login", (req, res) => {
+app.post("/api/admin/login", async (req, res) => {
   const { username, password } = req.body;
 
-  db.query(
-    "SELECT * FROM nhanvien WHERE BINARY username = ?",
-    [username],
-    async (err, results) => {
-      if (err) return res.status(500).json({ error: "Lỗi server" });
-      if (results.length === 0)
-        return res.status(401).json({ error: "Tài khoản không tồn tại" });
+  try {
+    const result = await db.query(
+      "SELECT * FROM nhanvien WHERE username = $1",
+      [username]
+    );
 
-      const user = results[0];
-      const isMatch = await bcrypt.compare(password, user.password);
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: "Tài khoản không tồn tại" });
+    }
 
-      if (!isMatch) return res.status(401).json({ error: "Sai mật khẩu" });
+    const user = result.rows[0];
 
-      res.json({
-        message: "Đăng nhập thành công",
-        userId: user.id,
-        hoten: user.hoten,
-      });
-    },
-  );
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ error: "Sai mật khẩu" });
+    }
+
+    res.json({
+      message: "Đăng nhập thành công",
+      userId: user.id,
+      hoten: user.hoten,
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 
 // User Login
-app.post("/api/user/login", (req, res) => {
+app.post("/api/user/login", async (req, res) => {
   const { email, password } = req.body;
 
-  db.query(
-    "SELECT * FROM khachhang WHERE email = ?",
-    [email],
-    async (err, results) => {
-      if (err) return res.status(500).json({ error: "Lỗi server" });
-      if (results.length === 0)
-        return res.status(401).json({ error: "Email không tồn tại" });
+  try {
+    const result = await db.query(
+      "SELECT * FROM khachhang WHERE email = $1",
+      [email]
+    );
 
-      const user = results[0];
-      const isMatch = await bcrypt.compare(password, user.password);
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: "Email không tồn tại" });
+    }
 
-      if (!isMatch) return res.status(401).json({ error: "Sai mật khẩu" });
+    const user = result.rows[0];
 
-      res.json({
-        message: "Đăng nhập thành công",
-        makh: user.makh,
-        tenkh: user.tenkh,
-        email: user.email,
-        sdt: user.sdt,
-      });
-    },
-  );
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ error: "Sai mật khẩu" });
+    }
+
+    res.json({
+      message: "Đăng nhập thành công",
+      makh: user.makh,
+      tenkh: user.tenkh,
+      email: user.email,
+      sdt: user.sdt,
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 
-// User Signup
+
+// ================= SIGNUP =================
 app.post("/api/user/signup", async (req, res) => {
   const { tenkh, email, sdt, password } = req.body;
 
@@ -79,214 +94,260 @@ app.post("/api/user/signup", async (req, res) => {
       return res.status(400).json({ error: "Thiếu thông tin bắt buộc" });
     }
 
-    // Kiểm tra email đã tồn tại
-    db.query(
-      "SELECT * FROM khachhang WHERE email = ?",
-      [email],
-      async (err, results) => {
-        if (err) return res.status(500).json({ error: "Lỗi server" });
-
-        if (results.length > 0) {
-          return res.status(409).json({ error: "Email đã được đăng ký" });
-        }
-
-        // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Thêm user mới
-        db.query(
-          "INSERT INTO khachhang (tenkh, email, sdt, password) VALUES (?, ?, ?, ?)",
-          [tenkh, email, sdt || "", hashedPassword],
-          (err) => {
-            if (err)
-              return res.status(500).json({ error: "Lỗi khi tạo tài khoản" });
-
-            res.json({ message: "Đăng ký thành công" });
-          },
-        );
-      },
+    // check email tồn tại
+    const checkUser = await db.query(
+      "SELECT * FROM khachhang WHERE email = $1",
+      [email]
     );
-  } catch (error) {
+
+    if (checkUser.rows.length > 0) {
+      return res.status(409).json({ error: "Email đã được đăng ký" });
+    }
+
+    // hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // insert user
+    await db.query(
+      `INSERT INTO khachhang (tenkh, email, sdt, password)
+       VALUES ($1, $2, $3, $4)`,
+      [tenkh, email, sdt || "", hashedPassword]
+    );
+
+    res.json({ message: "Đăng ký thành công" });
+
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Lỗi server" });
   }
 });
 
 //Lấy tất cả sản phẩm
-app.get("/api/sanpham", (req, res) => {
-  const querySanpham = "SELECT * FROM sanpham";
-  const queryTonKho = "SELECT * FROM sanpham_variant";
+app.get("/api/sanpham", async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        sp.*,
+        v.id AS variant_id,
+        v.mamau,
+        v.size,
+        v.stock,
+        v.price
+      FROM sanpham sp
+      LEFT JOIN sanpham_variant v ON sp.masp = v.masp
+      ORDER BY sp.masp
+    `);
 
-  db.query(querySanpham, (err, sanphamResults) => {
-    if (err) return res.status(500).json({ error: err.message });
+    // gom variants theo sản phẩm
+    const productsMap = {};
 
-    db.query(queryTonKho, (err2, tonkhoResults) => {
-      if (err2) return res.status(500).json({ error: err2.message });
+    result.rows.forEach((row) => {
+      if (!productsMap[row.masp]) {
+        productsMap[row.masp] = {
+          masp: row.masp,
+          tensp: row.tensp,
+          mota: row.mota,
+          gia: row.gia,
+          hinhanh: row.hinhanh,
+          madm: row.madm,
+          variants: [],
+        };
+      }
 
-      const productsWithTonkho = sanphamResults.map((sp) => {
-        const variants = tonkhoResults
-          .filter((tk) => tk.masp === sp.masp)
-          .map((tk) => ({
-            variant_id: tk.id,
-            mamau: tk.mamau,
-            size: tk.size,
-            stock: tk.stock,
-            price: tk.price,
-          }));
-
-        return { ...sp, variants };
-      });
-
-      res.json(productsWithTonkho);
+      if (row.variant_id) {
+        productsMap[row.masp].variants.push({
+          variant_id: row.variant_id,
+          mamau: row.mamau,
+          size: row.size,
+          stock: row.stock,
+          price: row.price,
+        });
+      }
     });
-  });
+
+    res.json(Object.values(productsMap));
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 
 //Lấy danh sách loại sản phẩm
-app.get("/api/loaisanpham", (req, res) => {
-  db.query("SELECT * FROM loaisanpham", (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(results);
-  });
+app.get("/api/loaisanpham", async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM loaisanpham");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 //Thêm loại sản phẩm
-app.post("/api/loaisanpham", (req, res) => {
+app.post("/api/loaisanpham", async (req, res) => {
   const { tenloai } = req.body;
-  if (!tenloai)
+
+  if (!tenloai) {
     return res.status(400).json({ error: "Tên loại không được để trống" });
+  }
 
-  // Kiểm tra tên đã tồn tại
-  db.query(
-    "SELECT * FROM loaisanpham WHERE tenloai = ?",
-    [tenloai],
-    (err, results) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (results.length > 0) {
-        return res.status(409).json({ error: "Tên loại sản phẩm đã tồn tại" });
-      }
+  try {
+    // kiểm tra trùng
+    const check = await db.query(
+      "SELECT * FROM loaisanpham WHERE tenloai = $1",
+      [tenloai]
+    );
 
-      // Nếu không trùng thì thêm mới
-      db.query(
-        "INSERT INTO loaisanpham (tenloai) VALUES (?)",
-        [tenloai],
-        (err, result) => {
-          if (err)
-            return res.status(500).json({ error: "Lỗi thêm loại sản phẩm" });
-          res.json({ message: "Thêm loại sản phẩm thành công" });
-        },
-      );
-    },
-  );
+    if (check.rows.length > 0) {
+      return res.status(409).json({ error: "Tên loại sản phẩm đã tồn tại" });
+    }
+
+    // insert
+    await db.query(
+      "INSERT INTO loaisanpham (tenloai) VALUES ($1)",
+      [tenloai]
+    );
+
+    res.json({ message: "Thêm loại sản phẩm thành công" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 
 //Sửa loại sản phẩm
-app.put("/api/loaisanpham/:maloai", (req, res) => {
+app.put("/api/loaisanpham/:maloai", async (req, res) => {
   const { maloai } = req.params;
   const { tenloai } = req.body;
-  if (!tenloai)
+
+  if (!tenloai) {
     return res.status(400).json({ error: "Tên loại không được để trống" });
+  }
 
-  // Kiểm tra nếu tên mới đã tồn tại ở loại khác
-  db.query(
-    "SELECT * FROM loaisanpham WHERE tenloai = ? AND maloai != ?",
-    [tenloai, maloai],
-    (err, results) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (results.length > 0) {
-        return res.status(409).json({ error: "Tên loại sản phẩm đã tồn tại" });
-      }
+  try {
+    // check trùng (trừ chính nó)
+    const check = await db.query(
+      "SELECT * FROM loaisanpham WHERE tenloai = $1 AND maloai != $2",
+      [tenloai, maloai]
+    );
 
-      // Nếu không trùng thì cập nhật
-      db.query(
-        "UPDATE loaisanpham SET tenloai = ? WHERE maloai = ?",
-        [tenloai, maloai],
-        (err, result) => {
-          if (err)
-            return res
-              .status(500)
-              .json({ error: "Lỗi cập nhật loại sản phẩm" });
-          if (result.affectedRows === 0) {
-            return res
-              .status(404)
-              .json({ error: "Không tìm thấy loại sản phẩm" });
-          }
-          res.json({ message: "Cập nhật loại sản phẩm thành công" });
-        },
-      );
-    },
-  );
+    if (check.rows.length > 0) {
+      return res.status(409).json({ error: "Tên loại sản phẩm đã tồn tại" });
+    }
+
+    // update + RETURNING để biết có tồn tại hay không
+    const result = await db.query(
+      "UPDATE loaisanpham SET tenloai = $1 WHERE maloai = $2 RETURNING *",
+      [tenloai, maloai]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Không tìm thấy loại sản phẩm" });
+    }
+
+    res.json({ message: "Cập nhật loại sản phẩm thành công" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 
 //Xóa loại sản phẩm nếu không còn sản phẩm liên kết
-app.delete("/api/loaisanpham/:maloai", (req, res) => {
+app.delete("/api/loaisanpham/:maloai", async (req, res) => {
   const { maloai } = req.params;
 
-  db.query(
-    "SELECT COUNT(*) AS total FROM sanpham WHERE maloai = ?",
-    [maloai],
-    (err, result) => {
-      if (err) return res.status(500).json({ error: err.message });
+  try {
+    // kiểm tra còn sản phẩm không
+    const check = await db.query(
+      "SELECT COUNT(*) FROM sanpham WHERE maloai = $1",
+      [maloai]
+    );
 
-      if (result[0].total > 0) {
-        return res.status(400).json({
-          error: "Không thể xóa loại sản phẩm vì vẫn còn sản phẩm liên quan",
-        });
-      }
+    const total = parseInt(check.rows[0].count);
 
-      db.query(
-        "DELETE FROM loaisanpham WHERE maloai = ?",
-        [maloai],
-        (err, result) => {
-          if (err) return res.status(500).json({ error: err.message });
+    if (total > 0) {
+      return res.status(400).json({
+        error: "Không thể xóa loại sản phẩm vì vẫn còn sản phẩm liên quan",
+      });
+    }
 
-          if (result.affectedRows === 0) {
-            return res
-              .status(404)
-              .json({ error: "Không tìm thấy loại sản phẩm để xóa" });
-          }
+    // delete
+    const result = await db.query(
+      "DELETE FROM loaisanpham WHERE maloai = $1 RETURNING *",
+      [maloai]
+    );
 
-          res.json({ message: "Xóa loại sản phẩm thành công" });
-        },
-      );
-    },
-  );
+    if (result.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "Không tìm thấy loại sản phẩm để xóa" });
+    }
+
+    res.json({ message: "Xóa loại sản phẩm thành công" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Lấy danh sách màu sắc
-app.get("/api/mausac", (req, res) => {
-  db.query("SELECT * FROM mausac", (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(results);
-  });
+app.get("/api/mausac", async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM mausac");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 //mâmu
-app.get("/api/mausac/:mamau", (req, res) => {
+app.get("/api/mausac/:mamau", async (req, res) => {
   const { mamau } = req.params;
-  db.query(
-    "SELECT tenmau FROM mausac WHERE mamau = ?",
-    [mamau],
-    (err, results) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (results.length === 0)
-        return res.status(404).json({ message: "Không tìm thấy màu sắc" });
-      res.json(results[0]);
-    },
-  );
+
+  try {
+    const result = await db.query(
+      "SELECT tenmau FROM mausac WHERE mamau = $1",
+      [mamau]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Không tìm thấy màu sắc" });
+    }
+
+    res.json(result.rows[0]);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 // API lấy toàn bộ sản phẩm kèm màu sắc
-app.get("/api/sanpham-full", (req, res) => {
+app.get("/api/sanpham-full", async (req, res) => {
   const sql = `
-        SELECT sp.*, v.id AS variant_id, v.mamau, v.size, v.stock, v.price AS variant_price, ms.tenmau
-        FROM sanpham sp
-        LEFT JOIN sanpham_variant v ON sp.masp = v.masp
-        LEFT JOIN mausac ms ON v.mamau = ms.mamau
-        ORDER BY sp.masp
-      `;
-  db.query(sql, (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
+    SELECT 
+      sp.*, 
+      v.id AS variant_id, 
+      v.mamau, 
+      v.size, 
+      v.stock, 
+      v.price AS variant_price, 
+      ms.tenmau
+    FROM sanpham sp
+    LEFT JOIN sanpham_variant v ON sp.masp = v.masp
+    LEFT JOIN mausac ms ON v.mamau = ms.mamau
+    ORDER BY sp.masp
+  `;
+
+  try {
+    const result = await db.query(sql);
 
     const map = new Map();
-    results.forEach((row) => {
+
+    result.rows.forEach((row) => {
       if (!map.has(row.masp)) {
         map.set(row.masp, {
           masp: row.masp,
@@ -298,6 +359,7 @@ app.get("/api/sanpham-full", (req, res) => {
           variants: [],
         });
       }
+
       if (row.variant_id) {
         map.get(row.masp).variants.push({
           variant_id: row.variant_id,
@@ -312,95 +374,121 @@ app.get("/api/sanpham-full", (req, res) => {
 
     const products = Array.from(map.values());
     res.json(products);
-  });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Thêm màu sắc
-app.post("/api/mausac", (req, res) => {
+app.post("/api/mausac", async (req, res) => {
   const { tenmau } = req.body;
-  if (!tenmau)
+
+  if (!tenmau) {
     return res.status(400).json({ error: "Tên màu sắc là bắt buộc" });
+  }
 
-  // Kiểm tra trùng tên
-  db.query(
-    "SELECT * FROM mausac WHERE tenmau = ?",
-    [tenmau],
-    (err, results) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (results.length > 0)
-        return res.status(409).json({ error: "Tên màu sắc đã tồn tại" });
+  try {
+    // kiểm tra trùng
+    const check = await db.query(
+      "SELECT * FROM mausac WHERE tenmau = $1",
+      [tenmau]
+    );
 
-      db.query("INSERT INTO mausac (tenmau) VALUES (?)", [tenmau], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: "Thêm màu sắc thành công" });
-      });
-    },
-  );
+    if (check.rows.length > 0) {
+      return res.status(409).json({ error: "Tên màu sắc đã tồn tại" });
+    }
+
+    // insert
+    await db.query(
+      "INSERT INTO mausac (tenmau) VALUES ($1)",
+      [tenmau]
+    );
+
+    res.json({ message: "Thêm màu sắc thành công" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Cập nhật màu sắc
-app.put("/api/mausac/:mamau", (req, res) => {
+app.put("/api/mausac/:mamau", async (req, res) => {
   const { mamau } = req.params;
   const { tenmau } = req.body;
 
-  if (!tenmau)
+  if (!tenmau) {
     return res.status(400).json({ error: "Tên màu sắc là bắt buộc" });
+  }
 
-  // Kiểm tra trùng tên
-  db.query(
-    "SELECT * FROM mausac WHERE tenmau = ? AND mamau != ?",
-    [tenmau, mamau],
-    (err, results) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (results.length > 0)
-        return res.status(409).json({ error: "Tên màu sắc đã tồn tại" });
+  try {
+    // check trùng (trừ chính nó)
+    const check = await db.query(
+      "SELECT * FROM mausac WHERE tenmau = $1 AND mamau != $2",
+      [tenmau, mamau]
+    );
 
-      db.query(
-        "UPDATE mausac SET tenmau = ? WHERE mamau = ?",
-        [tenmau, mamau],
-        (err) => {
-          if (err) return res.status(500).json({ error: err.message });
-          res.json({ message: "Cập nhật thành công" });
-        },
-      );
-    },
-  );
+    if (check.rows.length > 0) {
+      return res.status(409).json({ error: "Tên màu sắc đã tồn tại" });
+    }
+
+    // update + RETURNING
+    const result = await db.query(
+      "UPDATE mausac SET tenmau = $1 WHERE mamau = $2 RETURNING *",
+      [tenmau, mamau]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Không tìm thấy màu sắc" });
+    }
+
+    res.json({ message: "Cập nhật thành công" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Xóa màu sắc
-app.delete("/api/mausac/:mamau", (req, res) => {
+app.delete("/api/mausac/:mamau", async (req, res) => {
   const { mamau } = req.params;
 
-  // 1. Kiểm tra xem màu sắc này còn được dùng không
-  const checkQuery = "SELECT * FROM sanpham_variant WHERE mamau = ?";
-  db.query(checkQuery, [mamau], (err, results) => {
-    if (err) return res.status(500).json({ error: "Lỗi kiểm tra dữ liệu" });
+  try {
+    const result = await db.query(
+      "DELETE FROM mausac WHERE mamau = $1 RETURNING *",
+      [mamau]
+    );
 
-    if (results.length > 0) {
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Không tìm thấy màu sắc" });
+    }
+
+    res.json({ message: "Xóa màu sắc thành công." });
+
+  } catch (err) {
+    if (err.code === "23503") {
       return res.status(400).json({
         error: "Không thể xóa vì còn sản phẩm đang sử dụng màu này.",
       });
     }
 
-    const deleteQuery = "DELETE FROM mausac WHERE mamau = ?";
-    db.query(deleteQuery, [mamau], (err2) => {
-      if (err2) return res.status(500).json({ error: "Lỗi khi xóa màu sắc" });
-
-      res.json({ message: "Xóa màu sắc thành công." });
-    });
-  });
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 
 //Lấy danh sách danh mục
-app.get("/api/danhmuc", (req, res) => {
-  const sql = "SELECT * FROM danhmuc";
-  connection.query(sql, (err, results) => {
-    if (err) {
-      console.error("Lỗi truy vấn danh mục:", err);
-      return res.status(500).json({ error: "Lỗi máy chủ" });
-    }
-    res.json(results);
-  });
+app.get("/api/danhmuc", async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM danhmuc");
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Lỗi truy vấn danh mục:", err);
+    res.status(500).json({ error: "Lỗi máy chủ" });
+  }
 });
 
 // Thêm danh mục
@@ -429,37 +517,34 @@ app.post("/api/danhmuc", (req, res) => {
 });
 
 // Sửa danh mục
-app.put("/api/danhmuc/:madm", (req, res) => {
+app.put("/api/danhmuc/:madm", async (req, res) => {
   const { madm } = req.params;
   const { tendm } = req.body;
-  if (!tendm)
+
+  if (!tendm) {
     return res.status(400).json({ error: "Tên danh mục không được để trống" });
+  }
 
-  // Kiểm tra nếu tên mới đã tồn tại ở danh mục khác
-  db.query(
-    "SELECT * FROM danhmuc WHERE tendm = ? AND madm != ?",
-    [tendm, madm],
-    (err, results) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (results.length > 0) {
-        return res.status(409).json({ error: "Tên danh mục đã tồn tại" });
-      }
+  try {
+    const result = await db.query(
+      "UPDATE danhmuc SET tendm = $1 WHERE madm = $2 RETURNING *",
+      [tendm, madm]
+    );
 
-      // Nếu không trùng thì cập nhật
-      db.query(
-        "UPDATE danhmuc SET tendm = ? WHERE madm = ?",
-        [tendm, madm],
-        (err, result) => {
-          if (err)
-            return res.status(500).json({ error: "Lỗi cập nhật danh mục" });
-          if (result.affectedRows === 0) {
-            return res.status(404).json({ error: "Không tìm thấy danh mục" });
-          }
-          res.json({ message: "Cập nhật danh mục thành công" });
-        },
-      );
-    },
-  );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Không tìm thấy danh mục" });
+    }
+
+    res.json({ message: "Cập nhật danh mục thành công" });
+
+  } catch (err) {
+    if (err.code === "23505") {
+      return res.status(409).json({ error: "Tên danh mục đã tồn tại" });
+    }
+
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 
 // Xóa danh mục nếu không còn sản phẩm liên kết
@@ -494,84 +579,114 @@ app.delete("/api/danhmuc/:madm", (req, res) => {
 });
 
 //Lấy sản phẩm theo mã loại
-app.get("/api/sanpham/loai/:maloai", (req, res) => {
+app.get("/api/sanpham/loai/:maloai", async (req, res) => {
   const { maloai } = req.params;
-  db.query(
-    "SELECT * FROM sanpham WHERE maloai = ?",
-    [maloai],
-    (err, results) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json(results);
-    },
-  );
+
+  try {
+    const result = await db.query(
+      "SELECT * FROM sanpham WHERE maloai = $1",
+      [maloai]
+    );
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 // GET /api/sanpham/:id/mausac
-app.get("/api/sanpham/:id/mausac", (req, res) => {
+app.get("/api/sanpham/:id/mausac", async (req, res) => {
   const { id } = req.params;
+
   const sql = `
-        SELECT v.id AS variant_id, v.mamau, v.size, v.stock, v.price, ms.tenmau
-        FROM sanpham_variant v
-        LEFT JOIN mausac ms ON v.mamau = ms.mamau
-        WHERE v.masp = ?
-      `;
-  db.query(sql, [id], (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(results);
-  });
+    SELECT 
+      v.id AS variant_id,
+      v.mamau,
+      v.size,
+      v.stock,
+      v.price,
+      ms.tenmau
+    FROM sanpham_variant v
+    LEFT JOIN mausac ms ON v.mamau = ms.mamau
+    WHERE v.masp = $1
+  `;
+
+  try {
+    const result = await db.query(sql, [id]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 
 // GET /api/sanpham/:id/stock
-app.get("/api/sanpham/:id/stock", (req, res) => {
+app.get("/api/sanpham/:id/stock", async (req, res) => {
   const { id } = req.params;
   const { mamau, variant_id } = req.query;
 
-  if (variant_id) {
-    const sql = "SELECT stock FROM sanpham_variant WHERE id = ?";
-    db.query(sql, [variant_id], (err, results) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (results.length === 0) return res.json({ soluong: 0 });
-      res.json({ soluong: results[0].stock });
-    });
-    return;
-  }
+  try {
+    let result;
 
-  const sql = `
-        SELECT SUM(stock) AS soluong
+    if (variant_id) {
+      result = await db.query(
+        "SELECT COALESCE(stock, 0) AS soluong FROM sanpham_variant WHERE id = $1",
+        [variant_id]
+      );
+    } else {
+      result = await db.query(
+        `
+        SELECT COALESCE(SUM(stock), 0) AS soluong
         FROM sanpham_variant
-        WHERE masp = ? AND mamau = ?
-      `;
-  db.query(sql, [id, mamau], (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ soluong: results[0]?.soluong || 0 });
-  });
+        WHERE masp = $1 AND mamau = $2
+        `,
+        [id, mamau]
+      );
+    }
+
+    res.json({
+      soluong: parseInt(result.rows[0]?.soluong || 0),
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 
 //Tìm kiếm sản phẩm
-app.get("/api/sanpham/timkiem", (req, res) => {
-  const { keyword } = req.query;
-  if (!keyword || keyword.trim() === "") {
-    return res.status(400).json({ error: "Thiếu từ khóa tìm kiếm" });
+app.get("/api/sanpham/search", async (req, res) => {
+  try {
+    const keyword = req.query.keyword || "";
+
+    const keywords = keyword.trim().split(" ");
+
+    const conditions = keywords
+      .map((_, i) => `(sp.tensp ILIKE $${i + 1} OR lsp.tenloai ILIKE $${i + 1})`)
+      .join(" AND ");
+
+    const values = keywords.map((k) => `%${k}%`);
+
+    const sql = `
+      SELECT sp.*
+      FROM sanpham sp
+      JOIN loaisanpham lsp ON sp.maloai = lsp.maloai
+      WHERE ${conditions}
+    `;
+
+    const result = await db.query(sql, values);
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server" });
   }
-
-  const searchKeyword = `%${keyword.trim()}%`;
-  const sql = `
-        SELECT sp.*
-        FROM sanpham sp
-        JOIN loaisanpham lsp ON sp.maloai = lsp.maloai
-        WHERE sp.tensp LIKE ? OR lsp.tenloai LIKE ?
-      `;
-
-  db.query(sql, [searchKeyword, searchKeyword], (err, results) => {
-    if (err) {
-      console.error("Lỗi khi tìm kiếm sản phẩm:", err);
-      return res.status(500).json({ error: "Lỗi tìm kiếm sản phẩm" });
-    }
-    res.json(results);
-  });
 });
 
 //Lấy chi tiết sản phẩm
-app.get("/api/sanpham/:id", (req, res) => {
+app.get("/api/sanpham/:id", async (req, res) => {
   const { id } = req.params;
 
   const sql = `
@@ -580,7 +695,7 @@ app.get("/api/sanpham/:id", (req, res) => {
       sp.tensp,
       sp.hinhanh,
       sp.gia,
-       sp.mota, 
+      sp.mota,
       v.id AS variant_id,
       v.mamau,
       v.size,
@@ -588,108 +703,120 @@ app.get("/api/sanpham/:id", (req, res) => {
       COALESCE(v.price, sp.gia) AS price
     FROM sanpham sp
     LEFT JOIN sanpham_variant v ON sp.masp = v.masp
-    WHERE sp.masp = ?
+    WHERE sp.masp = $1
   `;
 
-  db.query(sql, [id], (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!results.length) return res.status(404).json({ message: "Not found" });
+  try {
+    const result = await db.query(sql, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    const rows = result.rows;
 
     const product = {
-      masp: results[0].masp,
-      tensp: results[0].tensp,
-      hinhanh: results[0].hinhanh,
-      gia: results[0].gia,
-      mota: results[0].mota,
-      variants: results.map((v) => ({
-        variant_id: v.variant_id,
-        mamau: v.mamau,
-        size: v.size,
-        stock: v.stock,
-        price: v.price, // 🔥 luôn có giá
-      })),
+      masp: rows[0].masp,
+      tensp: rows[0].tensp,
+      hinhanh: rows[0].hinhanh,
+      gia: rows[0].gia,
+      mota: rows[0].mota,
+      variants: rows
+        .filter((v) => v.variant_id) // tránh null khi không có variant
+        .map((v) => ({
+          variant_id: v.variant_id,
+          mamau: v.mamau,
+          size: v.size,
+          stock: v.stock,
+          price: v.price,
+        })),
     };
 
     res.json(product);
-  });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 
 //sss
 
 //Lấy sản phẩm theo mã danh mục
-app.get("/api/sanpham/danhmuc/:madm", (req, res) => {
-  const madm = req.params.madm;
-  const sql = "SELECT * FROM sanpham WHERE madm = ?";
-  db.query(sql, [madm], (err, results) => {
-    if (err) return res.status(500).json(err);
-    res.json(results);
-  });
+app.get("/api/sanpham/danhmuc/:madm", async (req, res) => {
+  const { madm } = req.params;
+
+  try {
+    const result = await db.query(
+      "SELECT * FROM sanpham WHERE madm = $1",
+      [madm]
+    );
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 
 //Thêm giỏ hàng
 app.post("/api/giohang", async (req, res) => {
-  const { masp, makh, quantity, variant_id, mamau, size } = req.body;
-
-  const conn = db.promise();
+  const { masp, makh, quantity, variant_id, mamau } = req.body;
 
   try {
-    // 🔥 Lấy variant + fallback giá
-    const [variantRows] = await conn.query(
+    // 🔥 lấy variant
+    const variantRes = await db.query(
       `
-        SELECT 
-          v.id,
-          v.stock,
-          COALESCE(v.price, sp.gia) AS price,
-          v.mamau,
-          v.size
-        FROM sanpham_variant v
-        JOIN sanpham sp ON sp.masp = v.masp
-        WHERE v.masp = ?
-        ${variant_id ? "AND v.id = ?" : ""}
-        ${!variant_id && mamau ? "AND v.mamau = ?" : ""}
-        `,
-      variant_id ? [masp, variant_id] : mamau ? [masp, mamau] : [masp],
+      SELECT 
+        v.id,
+        v.stock,
+        COALESCE(v.price, sp.gia) AS price,
+        v.mamau,
+        v.size
+      FROM sanpham_variant v
+      JOIN sanpham sp ON sp.masp = v.masp
+      WHERE v.masp = $1
+      ${variant_id ? "AND v.id = $2" : ""}
+      ${!variant_id && mamau ? "AND v.mamau = $2" : ""}
+      `,
+      variant_id ? [masp, variant_id] : mamau ? [masp, mamau] : [masp]
     );
 
-    if (variantRows.length === 0) {
-      return res
-        .status(404)
-        .json({ error: "Không tìm thấy biến thể sản phẩm" });
+    if (variantRes.rows.length === 0) {
+      return res.status(404).json({ error: "Không tìm thấy biến thể" });
     }
 
-    const variant = variantRows[0];
+    const variant = variantRes.rows[0];
 
-    // ❌ Không đủ hàng
+    // ❌ check tồn kho trước
     if (quantity > variant.stock) {
-      return res.status(400).json({ error: "Không đủ hàng trong kho" });
+      return res.status(400).json({ error: "Không đủ hàng" });
     }
 
-    // ❗ KHÔNG trừ kho ở đây
-
-    // ✅ Lưu giá đúng (snapshot)
-    await conn.query(
-      `INSERT INTO giohang (price, masp, makh, mamau, size, quantity)
-        VALUES (?, ?, ?, ?, ?, ?)`,
+    // 🔥 UPSERT (KHÔNG BAO GIỜ BỊ DUPLICATE)
+    await db.query(
+      `
+      INSERT INTO giohang (price, masp, makh, mamau, size, quantity)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (makh, masp, mamau, size)
+      DO UPDATE 
+      SET quantity = giohang.quantity + EXCLUDED.quantity
+      `,
       [
-        variant.price, // 🔥 luôn lấy từ DB
+        variant.price,
         masp,
         makh,
         variant.mamau,
         variant.size,
         quantity,
-      ],
+      ]
     );
 
-    res.json({
-      message: "Thêm vào giỏ hàng thành công",
-      product: {
-        masp,
-        price: variant.price,
-        quantity,
-      },
-    });
+    res.json({ message: "OK thêm/cập nhật giỏ hàng" });
+
   } catch (err) {
-    console.error("Lỗi:", err);
+    console.error(err);
     res.status(500).json({ error: "Lỗi server" });
   }
 });
@@ -698,191 +825,301 @@ app.post("/api/giohang", async (req, res) => {
 // Lấy danh sách tất cả đơn hàng
 app.get("/api/hoadon", async (req, res) => {
   try {
-    const [orders] = await connection.promise().query(`
-        SELECT hd.*, kh.tenkh 
-        FROM hoadon hd 
-        JOIN khachhang kh ON hd.makh = kh.makh 
-        ORDER BY hd.ngayxuat DESC
-      `);
-    res.json(orders);
+    const result = await db.query(`
+      SELECT hd.*, kh.tenkh 
+      FROM hoadon hd 
+      JOIN khachhang kh ON hd.makh = kh.makh 
+      ORDER BY hd.ngayxuat DESC
+    `);
+
+    res.json(result.rows);
+
   } catch (err) {
     console.error("Lỗi khi lấy đơn hàng:", err);
     res.status(500).json({ error: "Lỗi server" });
   }
 });
 // Cập nhật trạng thái đơn hàng
-app.put("/api/hoadon/:id", (req, res) => {
+app.put("/api/hoadon/:id", async (req, res) => {
   const { id } = req.params;
   const { trangthai } = req.body;
+
+  const validStatus = ["pending", "confirmed", "shipping", "completed", "cancelled"];
 
   if (!trangthai) {
     return res.status(400).json({ error: "Thiếu trạng thái mới." });
   }
 
-  const sql = "UPDATE hoadon SET trangthai = ? WHERE mahd = ?";
-  db.query(sql, [trangthai, id], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
+  if (!validStatus.includes(trangthai)) {
+    return res.status(400).json({ error: "Trạng thái không hợp lệ" });
+  }
+
+  try {
+    const result = await db.query(
+      "UPDATE hoadon SET trangthai = $1 WHERE mahd = $2",
+      [trangthai, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Không tìm thấy hóa đơn" });
+    }
+
     res.json({ success: true, message: "Cập nhật trạng thái thành công." });
-  });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 //Quản lý tồn kho
-app.get("/api/tonkho", (req, res) => {
-  const sql = `
-    SELECT 
-      v.id AS variant_id,
-      sp.masp,
-      sp.tensp,
-      sp.gia AS price,
-      v.mamau,
-      ms.tenmau,
-      ms.hex_code,
-      ms.image,
-      v.size,
-      v.stock AS soluong
-    FROM sanpham_variant v
-    JOIN sanpham sp ON v.masp = sp.masp
-    LEFT JOIN mausac ms ON v.mamau = ms.mamau
-  `;
+app.get("/api/tonkho", async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        v.id AS variant_id,
+        sp.masp,
+        sp.tensp,
+        sp.gia AS price,
+        v.mamau,
+        ms.tenmau,
+        ms.hex_code,
+        ms.image,
+        v.size,
+        v.stock AS soluong
+      FROM sanpham_variant v
+      JOIN sanpham sp ON v.masp = sp.masp
+      LEFT JOIN mausac ms ON v.mamau = ms.mamau
+    `);
 
-  db.query(sql, (err, result) => {
-    if (err) {
-      console.error("Lỗi khi truy vấn tồn kho:", err);
-      return res.status(500).json({ error: "Lỗi máy chủ" });
-    }
-    res.json(result);
-  });
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error("Lỗi khi truy vấn tồn kho:", err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 // thêm vào kho
-app.post("/api/tonkho", (req, res) => {
+app.post("/api/tonkho", async (req, res) => {
   const { masp, mamau, size = null, soluong, price } = req.body;
 
   if (!masp || !mamau || soluong == null) {
     return res.status(400).json({ error: "Thiếu dữ liệu gửi lên" });
   }
 
-  let productPrice = price;
-  if (productPrice == null) {
-    productPrice = 0;
-    db.query("SELECT gia FROM sanpham WHERE masp = ?", [masp], (err, rows) => {
-      if (!err && rows.length > 0) {
-        productPrice = rows[0].gia || 0;
-      }
+  try {
+    // 🔥 1. lấy giá nếu không truyền
+    let productPrice = price;
 
-      const sql =
-        "INSERT INTO sanpham_variant (masp, mamau, size, price, stock) VALUES (?, ?, ?, ?, ?)";
-
-      db.query(
-        sql,
-        [masp, mamau, size, productPrice, soluong],
-        (err2, result) => {
-          if (err2) {
-            if (err2.code === "ER_DUP_ENTRY") {
-              return res.status(409).json({
-                error:
-                  "Biến thể này đã tồn tại. Vui lòng sửa số lượng hoặc giá thay vì thêm mới.",
-              });
-            }
-
-            console.error("Lỗi thêm kho:", err2);
-            return res
-              .status(500)
-              .json({ error: "Lỗi máy chủ khi thêm tồn kho" });
-          }
-
-          res.json({
-            message: "Đã thêm tồn kho thành công",
-            id: result.insertId,
-          });
-        },
+    if (productPrice == null) {
+      const priceRes = await db.query(
+        "SELECT gia FROM sanpham WHERE masp = $1",
+        [masp]
       );
-    });
-    return;
-  }
 
-  const sql =
-    "INSERT INTO sanpham_variant (masp, mamau, size, price, stock) VALUES (?, ?, ?, ?, ?)";
-
-  db.query(sql, [masp, mamau, size, productPrice, soluong], (err, result) => {
-    if (err) {
-      if (err.code === "ER_DUP_ENTRY") {
-        return res.status(409).json({
-          error:
-            "Biến thể này đã tồn tại. Vui lòng sửa số lượng hoặc giá thay vì thêm mới.",
-        });
+      if (priceRes.rows.length === 0) {
+        return res.status(404).json({ error: "Không tìm thấy sản phẩm" });
       }
 
-      console.error("Lỗi thêm kho:", err);
-      return res.status(500).json({ error: "Lỗi máy chủ khi thêm tồn kho" });
+      productPrice = priceRes.rows[0].gia || 0;
     }
 
-    res.json({ message: "Đã thêm tồn kho thành công", id: result.insertId });
-  });
+    // 🔥 2. insert + chống duplicate
+    const result = await db.query(
+      `
+      INSERT INTO sanpham_variant (masp, mamau, size, price, stock)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id
+      `,
+      [masp, mamau, size, productPrice, soluong]
+    );
+
+    res.json({
+      message: "Đã thêm tồn kho thành công",
+      id: result.rows[0].id,
+    });
+
+  } catch (err) {
+    // 🔥 PostgreSQL duplicate
+    if (err.code === "23505") {
+      return res.status(409).json({
+        error:
+          "Biến thể này đã tồn tại. Hãy cập nhật thay vì thêm mới.",
+      });
+    }
+
+    console.error("Lỗi thêm kho:", err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 
 //sửa kho
-app.put("/api/tonkho", (req, res) => {
+app.put("/api/tonkho", async (req, res) => {
   const { variant_id, masp, mamau, size = null, soluong, price } = req.body;
 
-  let sql = "UPDATE sanpham_variant SET stock = ?, price = ? WHERE id = ?";
-  const params = [soluong, price || 0, variant_id];
-
-  if (!variant_id) {
-    sql =
-      "UPDATE sanpham_variant SET stock = ?, price = ? WHERE masp = ? AND mamau = ? AND size IS NULL";
-    params[1] = price || 0;
-    params[2] = masp;
-    params[3] = mamau;
+  if (soluong == null) {
+    return res.status(400).json({ error: "Thiếu số lượng" });
   }
 
-  db.query(sql, params, (err, result) => {
-    if (err) return res.status(500).json({ error: "Lỗi cập nhật kho" });
+  try {
+    let result;
+
+    // 🔥 Ưu tiên update theo variant_id (chuẩn nhất)
+    if (variant_id) {
+      result = await db.query(
+        `
+        UPDATE sanpham_variant
+        SET stock = $1, price = $2
+        WHERE id = $3
+        `,
+        [soluong, price ?? 0, variant_id]
+      );
+    } else {
+      // ⚠️ fallback theo masp + mamau + size
+      if (!masp || !mamau) {
+        return res.status(400).json({ error: "Thiếu thông tin variant" });
+      }
+
+      result = await db.query(
+        `
+        UPDATE sanpham_variant
+        SET stock = $1, price = $2
+        WHERE masp = $3 
+          AND mamau = $4 
+          AND size IS NOT DISTINCT FROM $5
+        `,
+        [soluong, price ?? 0, masp, mamau, size]
+      );
+    }
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Không tìm thấy variant" });
+    }
+
     res.json({ message: "Cập nhật tồn kho thành công" });
-  });
+
+  } catch (err) {
+    console.error("Lỗi cập nhật kho:", err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 //xóa kho
-app.delete("/api/tonkho/:variant_id", (req, res) => {
+app.delete("/api/tonkho/:variant_id", async (req, res) => {
   const { variant_id } = req.params;
-  const sql = "DELETE FROM sanpham_variant WHERE id = ?";
-  db.query(sql, [variant_id], (err, result) => {
-    if (err) return res.status(500).json({ error: "Lỗi khi xóa tồn kho" });
-    if (result.affectedRows === 0)
-      return res
-        .status(404)
-        .json({ error: "Không tìm thấy dòng tồn kho cần xóa" });
+
+  try {
+    // 🔥 check ràng buộc
+    const orderCheck = await db.query(
+      "SELECT 1 FROM hoadon_chitiet WHERE variant_id = $1 LIMIT 1",
+      [variant_id]
+    );
+
+    if (orderCheck.rows.length > 0) {
+      return res.status(400).json({
+        error: "Không thể xóa vì đã tồn tại trong hóa đơn",
+      });
+    }
+
+    const result = await db.query(
+      "DELETE FROM sanpham_variant WHERE id = $1",
+      [variant_id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        error: "Không tìm thấy dòng tồn kho cần xóa",
+      });
+    }
+
     res.json({ message: "Xóa thành công" });
-  });
+
+  } catch (err) {
+    console.error("Lỗi khi xóa tồn kho:", err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 
 // Hỗ trợ xóa tồn kho bằng masp và mamau cho UI hiện tại
-app.delete("/api/tonkho/:masp/:mamau", (req, res) => {
+app.delete("/api/tonkho/:masp/:mamau", async (req, res) => {
   const { masp, mamau } = req.params;
-  const sql =
-    "DELETE FROM sanpham_variant WHERE masp = ? AND mamau = ? AND size IS NULL";
-  db.query(sql, [masp, mamau], (err, result) => {
-    if (err) return res.status(500).json({ error: "Lỗi khi xóa tồn kho" });
-    if (result.affectedRows === 0)
-      return res
-        .status(404)
-        .json({ error: "Không tìm thấy dòng tồn kho cần xóa" });
-    res.json({ message: "Xóa thành công" });
-  });
+  const { size = null } = req.query; // 👈 nhận thêm size
+
+  try {
+    // 🔥 check tồn tại
+    const check = await db.query(
+      `
+      SELECT id FROM sanpham_variant
+      WHERE masp = $1 
+        AND mamau = $2 
+        AND size IS NOT DISTINCT FROM $3
+        AND is_deleted = FALSE
+      `,
+      [masp, mamau, size]
+    );
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({
+        error: "Không tìm thấy variant",
+      });
+    }
+
+    // ❗ check đã dùng trong hóa đơn chưa
+    const used = await db.query(
+      `
+      SELECT 1 FROM hoadon_chitiet
+      WHERE variant_id = $1
+      LIMIT 1
+      `,
+      [check.rows[0].id]
+    );
+
+    if (used.rows.length > 0) {
+      return res.status(400).json({
+        error: "Không thể xóa vì đã có trong hóa đơn",
+      });
+    }
+
+    // 🔥 soft delete
+    await db.query(
+      `
+      UPDATE sanpham_variant
+      SET is_deleted = TRUE
+      WHERE id = $1
+      `,
+      [check.rows[0].id]
+    );
+
+    res.json({
+      message: "Đã xóa (soft delete)",
+    });
+
+  } catch (err) {
+    console.error("Lỗi delete variant:", err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
 });
 //hóa đơn theo sdt
 app.get("/api/hoadon/sdt/:sdt", async (req, res) => {
-  const connection = require("./connectDB/db");
   const { sdt } = req.params;
 
   try {
-    const conn = connection.promise();
-
-    const [orders] = await conn.query(
-      `SELECT * FROM hoadon 
-       WHERE sdt_nguoinhan = ?
-       ORDER BY mahd DESC`,
+    const result = await db.query(
+      `
+      SELECT 
+        hd.mahd,
+        hd.ngayxuat,
+        hd.tongtien,
+        hd.trangthai,
+        hd.sdt_nguoinhan,
+        kh.tenkh
+      FROM hoadon hd
+      LEFT JOIN khachhang kh ON hd.makh = kh.makh
+      WHERE hd.sdt_nguoinhan = $1
+      ORDER BY hd.mahd DESC
+      `,
       [sdt]
     );
 
-    res.json(orders);
+    res.json(result.rows);
 
   } catch (err) {
     console.error("Lỗi lấy đơn hàng theo SĐT:", err);
@@ -894,65 +1131,70 @@ app.get("/api/hoadon/:id/chitiet", async (req, res) => {
   const { id } = req.params;
 
   try {
-    const conn = db.promise();
+    const result = await db.query(
+      `
+      SELECT 
+        hd.mahd,
+        hd.ngayxuat,
+        hd.tongtien,
+        hd.trangthai,
+        hd.ghichu,
+        hd.pttt,
+        hd.thanhtoan,
+        kh.tenkh,
+        kh.diachi,
+        kh.sdt,
 
-    // ================= THÔNG TIN HÓA ĐƠN =================
-    const [orderInfo] = await conn.query(
-      `SELECT 
-          hd.mahd, 
-          hd.ngayxuat, 
-          hd.tongtien, 
-          hd.trangthai, 
-          hd.ghichu, 
-          hd.pttt, 
-          hd.thanhtoan,
-          kh.tenkh, 
-          kh.diachi, 
-          kh.sdt, 
-          kh.makh
-       FROM hoadon hd
-       LEFT JOIN khachhang kh ON hd.makh = kh.makh
-       WHERE hd.mahd = ?`,
+        json_agg(
+          json_build_object(
+            'tensp', sp.tensp,
+            'size', v.size,
+            'mausac', ms.tenmau,
+            'hex_code', ms.hex_code,
+            'image', ms.image,
+            'soluong', ct.quantity,
+            'gia', ct.price
+          )
+        ) AS items
+
+      FROM hoadon hd
+      LEFT JOIN khachhang kh ON hd.makh = kh.makh
+      LEFT JOIN chitiethoadon ct ON hd.mahd = ct.mahd
+      LEFT JOIN sanpham_variant v ON ct.variant_id = v.id
+      LEFT JOIN sanpham sp ON v.masp = sp.masp
+      LEFT JOIN mausac ms ON v.mamau = ms.mamau
+
+      WHERE hd.mahd = $1
+      GROUP BY hd.mahd, kh.tenkh, kh.diachi, kh.sdt
+      `,
       [id]
     );
 
-    if (orderInfo.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: "Không tìm thấy hóa đơn" });
     }
 
-    // ================= CHI TIẾT SẢN PHẨM =================
-    const [orderItems] = await conn.query(
-  `SELECT 
-      sp.tensp,
-      v.size,
-      ms.tenmau AS mausac,
-      ms.hex_code,
-      ms.image,         -- 🔥 THÊM DÒNG NÀY
-      ct.quantity,
-      ct.price
-   FROM chitiethoadon ct
-
-   LEFT JOIN sanpham sp 
-     ON ct.masp = sp.masp
-
-   LEFT JOIN sanpham_variant v 
-     ON ct.variant_id = v.id
-
-   LEFT JOIN mausac ms 
-     ON v.mamau = ms.mamau
-
-   WHERE ct.mahd = ?`,
-  [id]
-);
+    const data = result.rows[0];
 
     res.json({
-      info: orderInfo[0],
-      items: orderItems,
+      info: {
+        mahd: data.mahd,
+        ngayxuat: data.ngayxuat,
+        tongtien: data.tongtien,
+        trangthai: data.trangthai,
+        ghichu: data.ghichu,
+        pttt: data.pttt,
+        thanhtoan: data.thanhtoan,
+        tenkh: data.tenkh,
+        diachi: data.diachi,
+        sdt: data.sdt,
+      },
+      items: data.items || [],
     });
 
   } catch (err) {
-    console.error("Lỗi lấy chi tiết hóa đơn:", err.message);
-    res.status(500).json({ error: "Lỗi server khi lấy chi tiết đơn hàng" });
+    console.error("Lỗi lấy chi tiết hóa đơn:", err);
+    res.status(500).json({ error: "Lỗi server" });
   }
 });
 
@@ -1042,143 +1284,143 @@ app.post("/api/checkout", async (req, res) => {
 
 ///////////////////////Momo thanh toán
 app.post("/api/momo/checkout", async (req, res) => {
-  const { tenkh, email, sdt, diachi, ghichu, cart, pttt, tongtien } = req.body;
+  const {
+    tenkh,
+    email,
+    sdt,
+    diachi,
+    ghichu,
+    items,
+    pttt,
+    tongtien,
+    makh: makhFromFE, // 👈 lấy từ FE
+  } = req.body;
 
   if (
     !tenkh ||
     !email ||
     !sdt ||
     !diachi ||
-    !Array.isArray(cart) ||
-    cart.length === 0
+    !Array.isArray(items) ||
+    items.length === 0
   ) {
-    return res
-      .status(400)
-      .json({ message: "Thiếu thông tin hoặc giỏ hàng trống" });
+    return res.status(400).json({
+      message: "Thiếu thông tin hoặc giỏ hàng trống",
+    });
   }
 
-  const connection = db;
+  const connection = db.promise();
 
   try {
-    for (const item of cart) {
-      const { variant_id, masp, mamau, soluong } = item;
-      let variantQuery =
+    // ================= TRANSACTION =================
+    await connection.beginTransaction();
+
+    // ================= CHECK STOCK =================
+    for (const item of items) {
+      const { variant_id, masp, mamau, quantity } = item;
+
+      let query =
+        "SELECT id, stock FROM sanpham_variant WHERE masp = ?";
+      const params = [masp];
+
+      if (variant_id) {
+        query += " AND id = ?";
+        params.push(variant_id);
+      } else if (mamau) {
+        query += " AND mamau = ?";
+        params.push(mamau);
+      }
+
+      const [rows] = await connection.query(query, params);
+
+      if (!rows.length || rows[0].stock < quantity) {
+        throw new Error(
+          `Sản phẩm không đủ hàng. Còn lại: ${
+            rows.length ? rows[0].stock : 0
+          }`
+        );
+      }
+    }
+
+    // ================= KHÁCH HÀNG =================
+    let makh = makhFromFE;
+
+    if (!makh) {
+      const [khResult] = await connection.query(
+        "INSERT INTO khachhang (tenkh, sdt, email, diachi) VALUES (?, ?, ?, ?)",
+        [tenkh, sdt, email, diachi]
+      );
+      makh = khResult.insertId;
+    }
+
+    // ================= HÓA ĐƠN =================
+    const [hdResult] = await connection.query(
+      `INSERT INTO hoadon 
+      (ngayxuat, tongtien, trangthai, thanhtoan, makh, pttt, ghichu) 
+      VALUES (NOW(), ?, 'Đang chuẩn bị', 'Chờ thanh toán', ?, ?, ?)`,
+      [tongtien, makh, pttt || "MoMo", ghichu || ""]
+    );
+
+    const mahd = hdResult.insertId;
+
+    // ================= CHI TIẾT + TRỪ KHO =================
+    for (const item of items) {
+      const { masp, variant_id, mamau, size, quantity, gia } = item;
+
+      let query =
         "SELECT id, stock, price, size, mamau FROM sanpham_variant WHERE masp = ?";
       const params = [masp];
 
       if (variant_id) {
-        variantQuery += " AND id = ?";
+        query += " AND id = ?";
         params.push(variant_id);
       } else if (mamau) {
-        variantQuery += " AND mamau = ?";
+        query += " AND mamau = ?";
         params.push(mamau);
       }
 
-      const [rows] = await new Promise((resolve, reject) => {
-        connection.query(variantQuery, params, (err, result) => {
-          if (err) return reject(err);
-          resolve(result);
-        });
-      });
+      const [variantRows] = await connection.query(query, params);
 
-      if (!rows.length || rows[0].stock < soluong) {
-        return res.status(400).json({
-          message: `Không đủ hàng cho sản phẩm. Còn lại: ${rows.length ? rows[0].stock : 0}`,
-        });
-      }
-    }
-
-    const [khachHangResult] = await new Promise((resolve, reject) => {
-      connection.query(
-        "INSERT INTO khachhang (tenkh, sdt, email, diachi) VALUES (?, ?, ?, ?)",
-        [tenkh, sdt, email, diachi],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve([result]);
-        },
-      );
-    });
-    const makh = khachHangResult[0].insertId;
-
-    const [hoaDonResult] = await new Promise((resolve, reject) => {
-      connection.query(
-        "INSERT INTO hoadon (ngayxuat, tongtien, trangthai, thanhtoan, makh, pttt, ghichu) VALUES (NOW(), ?, 'Đang chuẩn bị', 'Chờ thanh toán', ?, ?, ?)",
-        [tongtien, makh, pttt || "MoMo", ghichu || ""],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve([result]);
-        },
-      );
-    });
-    const mahd = hoaDonResult[0].insertId;
-
-    const insertGioHangQuery = `INSERT INTO giohang (masp, variant_id, makh, mamau, size, quantity, price, mahd) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-
-    for (const item of cart) {
-      const { masp, variant_id, mamau, size, soluong, gia } = item;
-      const variantRows = await new Promise((resolve, reject) => {
-        let variantSelect =
-          "SELECT id, stock, price, size, mamau FROM sanpham_variant WHERE masp = ?";
-        const params = [masp];
-
-        if (variant_id) {
-          variantSelect += " AND id = ?";
-          params.push(variant_id);
-        } else if (mamau) {
-          variantSelect += " AND mamau = ? AND size IS NULL";
-          params.push(mamau);
-        }
-
-        connection.query(variantSelect, params, (err, result) => {
-          if (err) return reject(err);
-          resolve(result);
-        });
-      });
       if (!variantRows.length) {
-        return res
-          .status(400)
-          .json({ message: "Không tìm thấy biến thể sản phẩm" });
+        throw new Error("Không tìm thấy biến thể sản phẩm");
       }
+
       const variant = variantRows[0];
       const priceToUse = gia || variant.price || 0;
 
-      await new Promise((resolve, reject) => {
-        connection.query(
-          insertGioHangQuery,
-          [
-            masp,
-            variant.id,
-            makh,
-            variant.mamau,
-            variant.size,
-            soluong,
-            priceToUse,
-            mahd,
-          ],
-          (err) => {
-            if (err) return reject(err);
-            resolve();
-          },
-        );
-      });
+      // Insert chi tiết hóa đơn
+      await connection.query(
+        `INSERT INTO chitiethoadon
+        (mahd, masp, variant_id, mamau, size, quantity, price)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          mahd,
+          masp,
+          variant.id,
+          variant.mamau,
+          variant.size,
+          quantity,
+          priceToUse,
+        ]
+      );
 
-      await new Promise((resolve, reject) => {
-        connection.query(
-          "UPDATE sanpham_variant SET stock = stock - ? WHERE id = ?",
-          [soluong, variant.id],
-          (err) => {
-            if (err) return reject(err);
-            resolve();
-          },
-        );
-      });
+      // Trừ kho
+      await connection.query(
+        "UPDATE sanpham_variant SET stock = stock - ? WHERE id = ?",
+        [quantity, variant.id]
+      );
     }
+
+    // ================= MOMO =================
+    const crypto = require("crypto");
+    const axios = require("axios");
 
     const accessKey = "F8BBA842ECF85";
     const secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
     const partnerCode = "MOMO";
+
     const redirectUrl = `http://localhost:3000/momo-success?mahd=${mahd}`;
-    const ipnUrl = "https://webhook.site/your-url"; // hoặc endpoint của bạn để xác nhận thanh toán
+    const ipnUrl = "https://webhook.site/your-url";
 
     const orderId = partnerCode + new Date().getTime();
     const requestId = orderId;
@@ -1218,71 +1460,153 @@ app.post("/api/momo/checkout", async (req, res) => {
       "https://test-payment.momo.vn/v2/gateway/api/create",
       requestBody,
       {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      },
+        headers: { "Content-Type": "application/json" },
+      }
     );
 
-    return res.status(200).json({
+    // ================= COMMIT =================
+    await connection.commit();
+
+    return res.json({
       message: "Tạo đơn hàng thành công",
       payUrl: momoRes.data.payUrl,
       mahd,
     });
   } catch (error) {
-    console.error("Lỗi xử lý /api/momo/checkout:", error);
-    return res.status(500).json({ message: "Lỗi server" });
+    console.error("🔥 MOMO CHECKOUT ERROR:", error);
+
+    await connection.rollback();
+
+    return res.status(500).json({
+      message: error.message || "Lỗi server",
+    });
   }
 });
+app.post("/api/momo/ipn", async (req, res) => {
+  const conn = await db.promise().getConnection();
 
+  try {
+    const { orderId, resultCode } = req.body;
+
+    const mahd = orderId.split("_")[1];
+
+    await conn.beginTransaction();
+
+    if (resultCode === 0) {
+      // ✅ thanh toán thành công
+
+      const [items] = await conn.query(
+        `SELECT variant_id, quantity 
+         FROM chitiethoadon WHERE mahd = ?`,
+        [mahd]
+      );
+
+      for (const item of items) {
+        // 🔥 LOCK + trừ kho
+        const [stockRow] = await conn.query(
+          `SELECT stock FROM sanpham_variant 
+           WHERE id = ? FOR UPDATE`,
+          [item.variant_id]
+        );
+
+        if (stockRow[0].stock < item.quantity) {
+          throw new Error("Hết hàng khi thanh toán");
+        }
+
+        await conn.query(
+          `UPDATE sanpham_variant
+           SET stock = stock - ?
+           WHERE id = ?`,
+          [item.quantity, item.variant_id]
+        );
+      }
+
+      // update trạng thái
+      await conn.query(
+        `UPDATE hoadon 
+         SET trangthai = 'CONFIRMED', thanhtoan = 'PAID'
+         WHERE mahd = ?`,
+        [mahd]
+      );
+
+    } else {
+      // ❌ thanh toán fail
+      await conn.query(
+        `UPDATE hoadon 
+         SET trangthai = 'CANCELLED', thanhtoan = 'FAILED'
+         WHERE mahd = ?`,
+        [mahd]
+      );
+    }
+
+    await conn.commit();
+
+    res.json({ message: "OK" });
+
+  } catch (err) {
+    await conn.rollback();
+    console.error("IPN ERROR:", err);
+    res.status(500).json({ error: "IPN lỗi" });
+  } finally {
+    conn.release();
+  }
+});
 //thêm sản phẩm
 app.post("/api/sanpham", async (req, res) => {
   const { tensp, hinhanh, gia, mota, maloai, madm } = req.body;
 
-  // Kiểm tra dữ liệu thiếu
+  // ================= VALIDATE =================
   if (!tensp || !hinhanh || !gia || !mota || !maloai || !madm) {
-    return res
-      .status(400)
-      .json({ error: "Vui lòng nhập đầy đủ thông tin sản phẩm" });
+    return res.status(400).json({
+      error: "Vui lòng nhập đầy đủ thông tin sản phẩm",
+    });
   }
 
-  // Kiểm tra giá hợp lệ
-  if (isNaN(gia) || gia <= 0) {
-    return res.status(400).json({ error: "Giá sản phẩm phải là số lớn hơn 0" });
+  if (isNaN(gia) || Number(gia) <= 0) {
+    return res.status(400).json({
+      error: "Giá sản phẩm phải là số lớn hơn 0",
+    });
   }
 
   try {
-    const conn = db.promise();
-
-    // Kiểm tra sản phẩm trùng tên
-    const [existRows] = await conn.query(
-      "SELECT * FROM sanpham WHERE tensp = ?",
-      [tensp],
+    // ================= CHECK TRÙNG =================
+    const exist = await pool.query(
+      "SELECT masp FROM sanpham WHERE tensp = $1 LIMIT 1",
+      [tensp.trim()]
     );
-    if (existRows.length > 0) {
-      return res.status(409).json({ error: "Tên sản phẩm đã tồn tại" });
+
+    if (exist.rows.length > 0) {
+      return res.status(409).json({
+        error: "Tên sản phẩm đã tồn tại",
+      });
     }
 
-    // Thêm sản phẩm
-    const sql = `
-        INSERT INTO sanpham (tensp, hinhanh, gia, mota, maloai, madm)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `;
-    const [result] = await conn.query(sql, [
-      tensp,
-      hinhanh,
-      gia,
-      mota,
-      maloai,
-      madm,
-    ]);
+    // ================= INSERT =================
+    const result = await pool.query(
+      `INSERT INTO sanpham (tensp, hinhanh, gia, mota, maloai, madm)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING masp`,
+      [
+        tensp.trim(),
+        hinhanh.trim(),
+        Number(gia),
+        mota.trim(),
+        maloai,
+        madm,
+      ]
+    );
 
-    res
-      .status(200)
-      .json({ message: "Thêm sản phẩm thành công", masp: result.insertId });
+    return res.status(201).json({
+      message: "Thêm sản phẩm thành công",
+      masp: result.rows[0].masp,
+    });
+
   } catch (err) {
-    console.error("Lỗi thêm sản phẩm:", err);
-    res.status(500).json({ error: "Lỗi server khi thêm sản phẩm" });
+    console.error("🔥 PostgreSQL error:", err);
+
+    return res.status(500).json({
+      error: "Lỗi server khi thêm sản phẩm",
+    });
   }
 });
 
@@ -1293,103 +1617,170 @@ app.put("/api/sanpham/:id", async (req, res) => {
   const { id } = req.params;
   const { tensp, hinhanh, gia, mota, maloai, madm } = req.body;
 
+  // ================= VALIDATE =================
   if (!tensp || !hinhanh || !gia || !mota || !maloai || !madm) {
-    return res
-      .status(400)
-      .json({ error: "Vui lòng nhập đầy đủ thông tin sản phẩm" });
+    return res.status(400).json({
+      error: "Vui lòng nhập đầy đủ thông tin sản phẩm",
+    });
   }
 
-  if (isNaN(gia) || gia <= 0) {
-    return res.status(400).json({ error: "Giá sản phẩm phải là số lớn hơn 0" });
+  if (isNaN(gia) || Number(gia) <= 0) {
+    return res.status(400).json({
+      error: "Giá sản phẩm phải là số lớn hơn 0",
+    });
   }
 
   try {
-    const conn = db.promise();
-
-    // Kiểm tra tên sản phẩm đã tồn tại nhưng KHÁC sản phẩm đang sửa
-    const [existRows] = await conn.query(
-      "SELECT * FROM sanpham WHERE tensp = ? AND masp != ?",
-      [tensp, id],
+    // ================= CHECK TRÙNG (KHÁC ID) =================
+    const exist = await pool.query(
+      `SELECT masp 
+       FROM sanpham 
+       WHERE tensp = $1 AND masp != $2 
+       LIMIT 1`,
+      [tensp.trim(), id]
     );
-    if (existRows.length > 0) {
-      return res.status(409).json({ error: "Tên sản phẩm đã tồn tại" });
+
+    if (exist.rows.length > 0) {
+      return res.status(409).json({
+        error: "Tên sản phẩm đã tồn tại",
+      });
     }
 
-    const sql = `
-        UPDATE sanpham
-        SET tensp = ?, hinhanh = ?, gia = ?, mota = ?, maloai = ?, madm = ?
-        WHERE masp = ?
-      `;
-    await conn.query(sql, [tensp, hinhanh, gia, mota, maloai, madm, id]);
+    // ================= UPDATE =================
+    const result = await pool.query(
+      `UPDATE sanpham
+       SET tensp = $1,
+           hinhanh = $2,
+           gia = $3,
+           mota = $4,
+           maloai = $5,
+           madm = $6
+       WHERE masp = $7
+       RETURNING masp`,
+      [
+        tensp.trim(),
+        hinhanh.trim(),
+        Number(gia),
+        mota.trim(),
+        maloai,
+        madm,
+        id,
+      ]
+    );
 
-    res.status(200).json({ message: "Cập nhật sản phẩm thành công" });
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        error: "Không tìm thấy sản phẩm",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Cập nhật sản phẩm thành công",
+      masp: result.rows[0].masp,
+    });
+
   } catch (err) {
-    console.error("Lỗi cập nhật sản phẩm:", err);
-    res.status(500).json({ error: "Lỗi server khi cập nhật sản phẩm" });
+    console.error("🔥 PostgreSQL update error:", err);
+
+    return res.status(500).json({
+      error: "Lỗi server khi cập nhật sản phẩm",
+    });
   }
 });
 
 // API xóa sản phẩm nếu không còn tồn tại trong kho
-app.delete("/api/sanpham/:masp", (req, res) => {
+app.delete("/api/sanpham/:masp", async (req, res) => {
   const { masp } = req.params;
 
-  const checkInventorySql = "SELECT * FROM sanpham_variant WHERE masp = ?";
+  try {
+    // ================= CHECK KHO =================
+    const inventory = await pool.query(
+      `SELECT 1 
+       FROM sanpham_variant 
+       WHERE masp = $1 
+       LIMIT 1`,
+      [masp]
+    );
 
-  db.query(checkInventorySql, [masp], (err, inventoryResults) => {
-    if (err) {
-      console.error("Lỗi khi kiểm tra kho:", err);
-      return res.status(500).json({ error: "Lỗi kiểm tra kho sản phẩm" });
+    if (inventory.rows.length > 0) {
+      return res.status(400).json({
+        error: "Không thể xóa. Sản phẩm còn tồn tại trong kho.",
+      });
     }
 
-    if (inventoryResults.length > 0) {
-      return res
-        .status(400)
-        .json({ error: "Không thể xóa. Sản phẩm còn tồn tại trong kho." });
+    // ================= DELETE =================
+    const result = await pool.query(
+      `DELETE FROM sanpham WHERE masp = $1`,
+      [masp]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        error: "Không tìm thấy sản phẩm",
+      });
     }
 
-    const deleteSql = "DELETE FROM sanpham WHERE masp = ?";
-    db.query(deleteSql, [masp], (err, result) => {
-      if (err) {
-        console.error("Lỗi khi xóa sản phẩm:", err);
-        return res.status(500).json({ error: "Lỗi khi xóa sản phẩm" });
-      }
-
-      return res.status(200).json({ message: "Xóa sản phẩm thành công" });
+    return res.status(200).json({
+      message: "Xóa sản phẩm thành công",
     });
-  });
+
+  } catch (err) {
+    console.error("🔥 PostgreSQL delete error:", err);
+
+    return res.status(500).json({
+      error: "Lỗi khi xóa sản phẩm",
+    });
+  }
 });
 
 // Cập nhật thông tin khách hàng
-app.put("/api/khachhang/update/:sdt", (req, res) => {
+app.put("/api/khachhang/update/:sdt", async (req, res) => {
   const { sdt } = req.params;
   const { tenkh, email, diachi } = req.body;
 
+  // ================= VALIDATE =================
   if (!tenkh || !email) {
-    return res.status(400).json({ message: "Tên và email là bắt buộc" });
+    return res.status(400).json({
+      message: "Tên và email là bắt buộc",
+    });
   }
 
-  const query = `
-      UPDATE khachhang
-      SET tenkh = ?, email = ?, diachi = ?
-      WHERE sdt = ?
-    `;
+  try {
+    // ================= UPDATE =================
+    const result = await pool.query(
+      `UPDATE khachhang
+       SET tenkh = $1,
+           email = $2,
+           diachi = $3
+       WHERE sdt = $4
+       RETURNING makh`,
+      [tenkh.trim(), email.trim(), diachi || null, sdt]
+    );
 
-  db.query(query, [tenkh, email, diachi, sdt], (err, result) => {
-    if (err) {
-      console.error("Lỗi cập nhật khách hàng:", err);
-      return res.status(500).json({ message: "Lỗi server" });
+    // ================= NOT FOUND =================
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        message: "Không tìm thấy khách hàng",
+      });
     }
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Không tìm thấy khách hàng" });
-    }
+    return res.status(200).json({
+      message: "Cập nhật thành công",
+      makh: result.rows[0].makh,
+    });
 
-    res.json({ message: "Cập nhật thành công" });
-  });
+  } catch (err) {
+    console.error("🔥 PostgreSQL update khachhang error:", err);
+
+    return res.status(500).json({
+      message: "Lỗi server",
+    });
+  }
 });
 
-// Khởi động server
+// ================= SERVER =================
 const PORT = 3001;
+
 app.listen(PORT, () => {
   console.log(`Server đang chạy tại http://localhost:${PORT}`);
 });
