@@ -18,7 +18,7 @@ const OrderDetailPage = () => {
       setError(null);
       try {
         const res = await axios.get(
-          `http://localhost:3001/api/hoadon/${id}/chitiet`
+          `https://sportshop.fly.dev/api/hoadon/${id}/chitiet`
         );
         console.log("res.data:", res.data);
         if (res.data.info) {

@@ -106,8 +106,8 @@ const CheckoutPage = () => {
 
       const apiUrl =
         pttt === "MoMo"
-          ? "http://localhost:3001/api/momo/checkout"
-          : "http://localhost:3001/api/checkout";
+          ? "https://sportshop.fly.dev/api/momo/checkout"
+          : "https://sportshop.fly.dev/api/checkout";
 
       const res = await axios.post(apiUrl, {
         ...form,

@@ -14,7 +14,7 @@ const DmPage = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/api/danhmuc");
+      const res = await axios.get("https://sportshop.fly.dev/api/danhmuc");
       setCategories(res.data);
     } catch (err) {
       console.error("Lỗi khi tải danh mục:", err);
@@ -28,7 +28,7 @@ const DmPage = () => {
     }
 
     try {
-      await axios.post("http://localhost:3001/api/danhmuc", {
+      await axios.post("https://sportshop.fly.dev/api/danhmuc", {
         tendm: newCategoryName.trim(),
       });
       setNewCategoryName("");
@@ -47,7 +47,7 @@ const DmPage = () => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa danh mục này?")) return;
 
     try {
-      await axios.delete(`http://localhost:3001/api/danhmuc/${madm}`);
+      await axios.delete(`https://sportshop.fly.dev/api/danhmuc/${madm}`);
       fetchCategories();
     } catch (err) {
       if (err.response?.status === 400) {
@@ -76,7 +76,7 @@ const DmPage = () => {
     }
 
     try {
-      await axios.put(`http://localhost:3001/api/danhmuc/${madm}`, {
+      await axios.put(`https://sportshop.fly.dev/api/danhmuc/${madm}`, {
         tendm: editName.trim(),
       });
 

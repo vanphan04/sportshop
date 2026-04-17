@@ -873,13 +873,16 @@ app.put("/api/hoadon/:id", async (req, res) => {
 });
 //Quản lý tồn kho
 app.get("/api/tonkho", async (req, res) => {
+  const { maloai } = req.query;
+
   try {
-    const result = await db.query(`
+    let query = `
       SELECT 
         v.id AS variant_id,
         sp.masp,
         sp.tensp,
         sp.gia AS price,
+        sp.maloai,
         v.mamau,
         ms.tenmau,
         ms.hex_code,
@@ -889,12 +892,20 @@ app.get("/api/tonkho", async (req, res) => {
       FROM sanpham_variant v
       JOIN sanpham sp ON v.masp = sp.masp
       LEFT JOIN mausac ms ON v.mamau = ms.mamau
-    `);
+    `;
 
+    const values = [];
+
+    if (maloai) {
+      query += ` WHERE sp.maloai = $1`;
+      values.push(maloai);
+    }
+
+    const result = await db.query(query, values);
     res.json(result.rows);
 
   } catch (err) {
-    console.error("Lỗi khi truy vấn tồn kho:", err);
+    console.error(err);
     res.status(500).json({ error: "Lỗi server" });
   }
 });

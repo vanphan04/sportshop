@@ -23,7 +23,7 @@ const OrderAdPage = () => {
 
   const fetchOrders = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/api/hoadon");
+      const res = await axios.get("https://sportshop.fly.dev/api/hoadon");
       setOrders(res.data);
     } catch (err) {
       console.error("Lỗi khi tải đơn hàng:", err);
@@ -32,7 +32,7 @@ const OrderAdPage = () => {
 
   const handleStatusChange = async (mahd, newStatus) => {
     try {
-      await axios.put(`http://localhost:3001/api/hoadon/${mahd}`, {
+      await axios.put(`https://sportshop.fly.dev/api/hoadon/${mahd}`, {
         trangthai: newStatus,
       });
       alert("Cập nhật trạng thái thành công");

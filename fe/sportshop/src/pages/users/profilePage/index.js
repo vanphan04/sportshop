@@ -42,7 +42,7 @@ const ProfilePage = () => {
       setLoadingOrders(true);
       try {
         const res = await axios.get(
-          `http://localhost:3001/api/hoadon/sdt/${encodeURIComponent(user.sdt)}`,
+          `https://sportshop.fly.dev/api/hoadon/sdt/${encodeURIComponent(user.sdt)}`,
         );
         setOrders(res.data || []);
       } catch (error) {
@@ -61,7 +61,7 @@ const ProfilePage = () => {
     setUpdating(true);
     try {
       await axios.put(
-        `http://localhost:3001/api/khachhang/update/${encodeURIComponent(user.sdt)}`,
+        `https://sportshop.fly.dev/api/khachhang/update/${encodeURIComponent(user.sdt)}`,
         editForm
       );
 

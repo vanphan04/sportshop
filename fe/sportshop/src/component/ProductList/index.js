@@ -6,7 +6,7 @@ const ProductList = () => {
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    axios.get("http://localhost:3000/api/sanpham")
+    axios.get("https://sportshop.fly.dev/api/sanpham")
       .then((res) => {
         setProducts(res.data);
       })

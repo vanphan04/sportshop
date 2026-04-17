@@ -7,7 +7,7 @@ import Breadcrumb from "../theme/breadcrumb";
 import "./style.scss";
 
 const BASE_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:3001"; 
+  process.env.REACT_APP_API_URL || "https://sportshop.fly.dev"; 
 
 const ProductsPage = () => {
   const sorts = ["Giảm dần", "Tăng dần"];

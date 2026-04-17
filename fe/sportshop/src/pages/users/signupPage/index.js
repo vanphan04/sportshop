@@ -43,7 +43,7 @@ const UserSignupPage = () => {
         return;
       }
 
-      await axios.post("http://127.0.0.1:3001/api/user/signup", {
+      await axios.post("https://sportshop.fly.dev/api/user/signup", {
         tenkh: formData.name,
         email: formData.email,
         sdt: formData.phone,

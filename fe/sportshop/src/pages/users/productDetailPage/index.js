@@ -30,13 +30,13 @@ const ProductDetailPage = () => {
 
   // ====================== LOAD DATA ======================
   useEffect(() => {
-    axios.get(`http://localhost:3001/api/sanpham/${id}`)
+    axios.get(`https://sportshop.fly.dev/api/sanpham/${id}`)
       .then((res) => {
         setProduct(res.data);
         setPrice(res.data.gia);
       });
 
-    axios.get("http://localhost:3001/api/sanpham")
+    axios.get("https://sportshop.fly.dev/api/sanpham")
       .then((res) => {
         const mapped = res.data.map((sp) => ({
           id: sp.masp,
@@ -48,7 +48,7 @@ const ProductDetailPage = () => {
         setSimilarProducts(mapped.sort(() => 0.5 - Math.random()).slice(0, 4));
       });
 
-    axios.get("http://localhost:3001/api/tonkho")
+    axios.get("https://sportshop.fly.dev/api/tonkho")
       .then((res) => {
         const productVariants = res.data.filter(
           (v) => v.masp === parseInt(id)

@@ -28,8 +28,8 @@ const AddProductPage = () => {
   const fetchOptions = async () => {
     try {
       const [resLoai, resDanhmuc] = await Promise.all([
-        axios.get("http://localhost:3001/api/loaisanpham"),
-        axios.get("http://localhost:3001/api/danhmuc"),
+        axios.get("https://sportshop.fly.dev/api/loaisanpham"),
+        axios.get("https://sportshop.fly.dev/api/danhmuc"),
       ]);
       setLoais(resLoai.data);
       setDanhmucs(resDanhmuc.data);
@@ -56,7 +56,7 @@ const AddProductPage = () => {
     }
 
     try {
-      const res = await axios.post("http://localhost:3001/api/sanpham", {
+      const res = await axios.post("https://sportshop.fly.dev/api/sanpham", {
         tensp,
         hinhanh,
         gia: parseInt(gia),

@@ -18,7 +18,7 @@ const UserOrderDetailPage = () => {
       setError(null);
       try {
         const res = await axios.get(
-          `http://localhost:3001/api/hoadon/${id}/chitiet`,
+          `https://sportshop.fly.dev/api/hoadon/${id}/chitiet`,
         );
         setOrderInfo(res.data.info);
         setProducts(res.data.items || []);
