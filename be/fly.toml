@@ -11,9 +11,6 @@ primary_region = "iad"
 [env]
   PORT = "3000"
 
-[experimental]
-  root = "be"
-
 [http_service]
   internal_port = 3000
   force_https = true
@@ -24,4 +21,3 @@ primary_region = "iad"
 [[vm]]
   memory = "1gb"
   cpu_kind = "shared"
-  cpus = 1
