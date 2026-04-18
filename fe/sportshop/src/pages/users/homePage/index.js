@@ -42,18 +42,17 @@ const HomePage = () => {
     { bgImg: cat5Img, name: "Phụ kiện" },
     { bgImg: cat3Img, name: "Vợt" },
     { bgImg: cat4Img, name: "Ba lô" },
-   
   ];
 
   useEffect(() => {
     axios
-      .get("https://sportshop.fly.dev/api/sanpham")
+      .get("http://localhost:3001/api/sanpham")
       .then((res) => {
         const mapped = res.data.map((sp) => ({
-          id: sp.masp, 
+          id: sp.masp,
           name: sp.tensp,
           price: sp.gia,
-          img: `/images/${sp.hinhanh}`, 
+          img: `/images/${sp.hinhanh}`,
         }));
         setProductData(mapped);
       })

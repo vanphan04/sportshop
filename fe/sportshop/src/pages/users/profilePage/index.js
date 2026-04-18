@@ -13,7 +13,7 @@ const ProfilePage = () => {
   const [editForm, setEditForm] = useState({
     tenkh: "",
     email: "",
-    diachi: ""
+    diachi: "",
   });
   const [updating, setUpdating] = useState(false);
   const navigate = useNavigate();
@@ -27,7 +27,7 @@ const ProfilePage = () => {
         setEditForm({
           tenkh: parsedUser.tenkh || parsedUser.name || "",
           email: parsedUser.email || "",
-          diachi: parsedUser.diachi || ""
+          diachi: parsedUser.diachi || "",
         });
       } catch (error) {
         console.error("Không đọc được thông tin người dùng:", error);
@@ -42,7 +42,7 @@ const ProfilePage = () => {
       setLoadingOrders(true);
       try {
         const res = await axios.get(
-          `https://sportshop.fly.dev/api/hoadon/sdt/${encodeURIComponent(user.sdt)}`,
+          `http://localhost:3001/api/hoadon/sdt/${encodeURIComponent(user.sdt)}`,
         );
         setOrders(res.data || []);
       } catch (error) {
@@ -61,8 +61,8 @@ const ProfilePage = () => {
     setUpdating(true);
     try {
       await axios.put(
-        `https://sportshop.fly.dev/api/khachhang/update/${encodeURIComponent(user.sdt)}`,
-        editForm
+        `http://localhost:3001/api/khachhang/update/${encodeURIComponent(user.sdt)}`,
+        editForm,
       );
 
       // Cập nhật localStorage và state
@@ -83,7 +83,7 @@ const ProfilePage = () => {
     setEditForm({
       tenkh: user.tenkh || user.name || "",
       email: user.email || "",
-      diachi: user.diachi || ""
+      diachi: user.diachi || "",
     });
     setIsEditing(false);
   };
@@ -158,7 +158,9 @@ const ProfilePage = () => {
                     <input
                       type="text"
                       value={editForm.tenkh}
-                      onChange={(e) => setEditForm({...editForm, tenkh: e.target.value})}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, tenkh: e.target.value })
+                      }
                       placeholder="Nhập họ tên"
                     />
                   </div>
@@ -167,7 +169,9 @@ const ProfilePage = () => {
                     <input
                       type="email"
                       value={editForm.email}
-                      onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, email: e.target.value })
+                      }
                       placeholder="Nhập email"
                     />
                   </div>
@@ -176,7 +180,9 @@ const ProfilePage = () => {
                     <input
                       type="text"
                       value={editForm.diachi}
-                      onChange={(e) => setEditForm({...editForm, diachi: e.target.value})}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, diachi: e.target.value })
+                      }
                       placeholder="Nhập địa chỉ"
                     />
                   </div>
@@ -191,7 +197,11 @@ const ProfilePage = () => {
                     <button
                       className="btn-save"
                       onClick={handleUpdateProfile}
-                      disabled={updating || !editForm.tenkh.trim() || !editForm.email.trim()}
+                      disabled={
+                        updating ||
+                        !editForm.tenkh.trim() ||
+                        !editForm.email.trim()
+                      }
                     >
                       {updating ? "Đang cập nhật..." : "Lưu thay đổi"}
                     </button>

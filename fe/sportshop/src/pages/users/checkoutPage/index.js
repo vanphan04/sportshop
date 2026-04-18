@@ -23,6 +23,7 @@ const CheckoutPage = () => {
     setCart(storedCart);
 
     const user = JSON.parse(localStorage.getItem("user"));
+    console.log("🔥 USER FROM LOCALSTORAGE:", user);
     if (user) {
       setForm({
         tenkh: user.tenkh || "",
@@ -35,10 +36,7 @@ const CheckoutPage = () => {
   }, []);
 
   // ================= TÍNH TIỀN =================
-  const total = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shippingFee = total < 300000 ? 30000 : 0;
   const totalAmount = total + shippingFee;
 
@@ -106,8 +104,8 @@ const CheckoutPage = () => {
 
       const apiUrl =
         pttt === "MoMo"
-          ? "https://sportshop.fly.dev/api/momo/checkout"
-          : "https://sportshop.fly.dev/api/checkout";
+          ? "http://localhost:3001/api/momo/checkout"
+          : "http://localhost:3001/api/checkout";
 
       const res = await axios.post(apiUrl, {
         ...form,
@@ -145,39 +143,23 @@ const CheckoutPage = () => {
           <div className="col-lg-6">
             <div className="checkout__input">
               <label>Họ và tên:</label>
-              <input
-                name="tenkh"
-                value={form.tenkh}
-                onChange={handleInput}
-              />
+              <input name="tenkh" value={form.tenkh} onChange={handleInput} />
             </div>
 
             <div className="checkout__input">
               <label>Địa chỉ:</label>
-              <input
-                name="diachi"
-                value={form.diachi}
-                onChange={handleInput}
-              />
+              <input name="diachi" value={form.diachi} onChange={handleInput} />
             </div>
 
             <div className="checkout__input__group">
               <div className="checkout__input">
                 <label>SĐT:</label>
-                <input
-                  name="sdt"
-                  value={form.sdt}
-                  onChange={handleInput}
-                />
+                <input name="sdt" value={form.sdt} onChange={handleInput} />
               </div>
 
               <div className="checkout__input">
                 <label>Email:</label>
-                <input
-                  name="email"
-                  value={form.email}
-                  onChange={handleInput}
-                />
+                <input name="email" value={form.email} onChange={handleInput} />
               </div>
             </div>
 
@@ -256,11 +238,7 @@ const CheckoutPage = () => {
                 onClick={handleSubmit}
                 disabled={loading}
               >
-                {loading ? (
-                  <ClipLoader size={20} color="#fff" />
-                ) : (
-                  "Thanh toán"
-                )}
+                {loading ? <ClipLoader size={20} color="#fff" /> : "Thanh toán"}
               </button>
             </div>
           </div>

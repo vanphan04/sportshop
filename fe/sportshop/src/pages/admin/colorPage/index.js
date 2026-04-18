@@ -2,7 +2,6 @@ import { useEffect, useState, memo } from "react";
 import axios from "axios";
 import "./style.scss";
 
-
 const ColorPage = () => {
   const [colors, setColors] = useState([]);
   const [newColorName, setNewColorName] = useState("");
@@ -15,7 +14,7 @@ const ColorPage = () => {
 
   const fetchColors = async () => {
     try {
-      const res = await axios.get("https://sportshop.fly.dev/api/mausac");
+      const res = await axios.get("http://localhost:3001/api/mausac");
       setColors(res.data);
     } catch (err) {
       console.error("Lỗi khi tải màu sắc:", err);
@@ -29,7 +28,7 @@ const ColorPage = () => {
     }
 
     try {
-      await axios.post("https://sportshop.fly.dev/api/mausacapi/mausac", {
+      await axios.post("http://localhost:3001/api/mausacapi/mausac", {
         tenmau: newColorName.trim(),
       });
       setNewColorName("");
@@ -48,7 +47,7 @@ const ColorPage = () => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa màu sắc này?")) return;
 
     try {
-      await axios.delete(`https://sportshop.fly.dev/api/mausac/${mamau}`);
+      await axios.delete(`http://localhost:3001/api/mausac/${mamau}`);
       fetchColors();
     } catch (err) {
       alert("Màu sắc này còn sản phẩm");
@@ -72,7 +71,7 @@ const ColorPage = () => {
     }
 
     try {
-      await axios.put(`https://sportshop.fly.dev/api/mausac/${mamau}`, {
+      await axios.put(`http://localhost:3001/api/mausac/${mamau}`, {
         tenmau: editName.trim(),
       });
 
@@ -130,13 +129,18 @@ const ColorPage = () => {
                   {editId === mamau ? (
                     <>
                       <button onClick={() => handleSaveEdit(mamau)}>Lưu</button>
-                      <button onClick={handleCancelEdit} style={{ marginLeft: 8 }}>
+                      <button
+                        onClick={handleCancelEdit}
+                        style={{ marginLeft: 8 }}
+                      >
                         Hủy
                       </button>
                     </>
                   ) : (
                     <>
-                      <button onClick={() => handleEditClick(mamau, tenmau)}>Sửa</button>
+                      <button onClick={() => handleEditClick(mamau, tenmau)}>
+                        Sửa
+                      </button>
                       <button
                         onClick={() => handleDeleteColor(mamau)}
                         style={{ marginLeft: 8 }}

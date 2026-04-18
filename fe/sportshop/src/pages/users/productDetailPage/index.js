@@ -30,42 +30,37 @@ const ProductDetailPage = () => {
 
   // ====================== LOAD DATA ======================
   useEffect(() => {
-    axios.get(`https://sportshop.fly.dev/api/sanpham/${id}`)
-      .then((res) => {
-        setProduct(res.data);
-        setPrice(res.data.gia);
-      });
+    axios.get(`http://localhost:3001/api/sanpham/${id}`).then((res) => {
+      setProduct(res.data);
+      setPrice(res.data.gia);
+    });
 
-    axios.get("https://sportshop.fly.dev/api/sanpham")
-      .then((res) => {
-        const mapped = res.data.map((sp) => ({
-          id: sp.masp,
-          name: sp.tensp,
-          price: sp.gia,
-          img: `/images/${sp.hinhanh}`,
-        }));
+    axios.get("http://localhost:3001/api/sanpham").then((res) => {
+      const mapped = res.data.map((sp) => ({
+        id: sp.masp,
+        name: sp.tensp,
+        price: sp.gia,
+        img: `/images/${sp.hinhanh}`,
+      }));
 
-        setSimilarProducts(mapped.sort(() => 0.5 - Math.random()).slice(0, 4));
-      });
+      setSimilarProducts(mapped.sort(() => 0.5 - Math.random()).slice(0, 4));
+    });
 
-    axios.get("https://sportshop.fly.dev/api/tonkho")
-      .then((res) => {
-        const productVariants = res.data.filter(
-          (v) => v.masp === parseInt(id)
-        );
+    axios.get("http://localhost:3001/api/tonkho").then((res) => {
+      const productVariants = res.data.filter((v) => v.masp === parseInt(id));
 
-        setVariants(productVariants);
+      setVariants(productVariants);
 
-        const uniqueColors = [
-          ...new Set(productVariants.map(v => Number(v.mamau)).filter(Boolean))
-        ];
+      const uniqueColors = [
+        ...new Set(productVariants.map((v) => Number(v.mamau)).filter(Boolean)),
+      ];
 
-        setColors(uniqueColors);
+      setColors(uniqueColors);
 
-        if (productVariants.length > 0) {
-          setSelectedColor(Number(productVariants[0].mamau));
-        }
-      });
+      if (productVariants.length > 0) {
+        setSelectedColor(Number(productVariants[0].mamau));
+      }
+    });
   }, [id]);
 
   // ====================== SIZE ======================
@@ -75,9 +70,9 @@ const ProductDetailPage = () => {
     return [
       ...new Set(
         variants
-          .filter(v => Number(v.mamau) === Number(selectedColor))
-          .map(v => v.size)
-          .filter(Boolean)
+          .filter((v) => Number(v.mamau) === Number(selectedColor))
+          .map((v) => v.size)
+          .filter(Boolean),
       ),
     ];
   }, [variants, selectedColor]);
@@ -91,7 +86,7 @@ const ProductDetailPage = () => {
     if (!sizes.includes(selectedSize)) {
       setSelectedSize(sizes[0]);
     }
-  }, [sizes,selectedSize]);
+  }, [sizes, selectedSize]);
 
   useEffect(() => {
     setSelectedSize("");
@@ -102,7 +97,7 @@ const ProductDetailPage = () => {
     const selected = variants.find(
       (v) =>
         Number(v.mamau) === Number(selectedColor) &&
-        (v.size || "") === selectedSize
+        (v.size || "") === selectedSize,
     );
 
     if (selected) {
@@ -124,13 +119,9 @@ const ProductDetailPage = () => {
 
       <div className="container">
         <div className="row">
-
           {/* IMAGE (LUÔN GIỮ ẢNH GỐC) */}
           <div className="col-lg-6 product__detail__pic">
-            <img
-              src={`/images/${product.hinhanh}`}
-              alt={product.tensp}
-            />
+            <img src={`/images/${product.hinhanh}`} alt={product.tensp} />
           </div>
 
           {/* INFO */}
@@ -146,7 +137,7 @@ const ProductDetailPage = () => {
               <div className="color-swatch">
                 {colors.map((color) => {
                   const variant = variants.find(
-                    v => Number(v.mamau) === Number(color)
+                    (v) => Number(v.mamau) === Number(color),
                   );
 
                   return (
@@ -163,7 +154,7 @@ const ProductDetailPage = () => {
                           ? `url(/images/${variant.image})`
                           : "none",
                         backgroundSize: "cover",
-                        backgroundPosition: "center"
+                        backgroundPosition: "center",
                       }}
                     />
                   );
@@ -199,7 +190,8 @@ const ProductDetailPage = () => {
               stock={stock}
               color={selectedColor}
               colorName={
-                variants.find(v => Number(v.mamau) === Number(selectedColor))?.tenmau || ""
+                variants.find((v) => Number(v.mamau) === Number(selectedColor))
+                  ?.tenmau || ""
               }
               size={selectedSize}
             />
@@ -216,7 +208,9 @@ const ProductDetailPage = () => {
               <li>
                 <b>Màu sắc:</b>{" "}
                 <span>
-                  {variants.find(v => Number(v.mamau) === Number(selectedColor))?.tenmau || "Chưa chọn"}
+                  {variants.find(
+                    (v) => Number(v.mamau) === Number(selectedColor),
+                  )?.tenmau || "Chưa chọn"}
                 </span>
               </li>
 

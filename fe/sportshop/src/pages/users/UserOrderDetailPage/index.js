@@ -18,8 +18,9 @@ const UserOrderDetailPage = () => {
       setError(null);
       try {
         const res = await axios.get(
-          `https://sportshop.fly.dev/api/hoadon/${id}/chitiet`,
+          `http://localhost:3001/api/hoadon/${id}/chitiet`
         );
+
         setOrderInfo(res.data.info);
         setProducts(res.data.items || []);
       } catch (err) {
@@ -49,6 +50,7 @@ const UserOrderDetailPage = () => {
         ) : (
           <div className="detail-content">
             <h2>Chi tiết đơn hàng #{orderInfo.mahd}</h2>
+
             <div className="detail-info">
               <p>
                 <b>Khách hàng:</b> {orderInfo.tenkh || "Chưa có thông tin"}
@@ -61,7 +63,9 @@ const UserOrderDetailPage = () => {
               </p>
               <p>
                 <b>Ngày đặt:</b>{" "}
-                {new Date(orderInfo.ngayxuat).toLocaleDateString("vi-VN")}
+                {orderInfo.ngayxuat
+                  ? new Date(orderInfo.ngayxuat).toLocaleDateString("vi-VN")
+                  : "Chưa có"}
               </p>
               <p>
                 <b>Trạng thái:</b> {orderInfo.trangthai || "Chưa cập nhật"}
@@ -70,6 +74,7 @@ const UserOrderDetailPage = () => {
                 <b>Phương thức thanh toán:</b>{" "}
                 {orderInfo.pttt || "Chưa cập nhật"}
               </p>
+
               {orderInfo.ghichu && (
                 <p>
                   <b>Ghi chú:</b> {orderInfo.ghichu}
@@ -79,6 +84,7 @@ const UserOrderDetailPage = () => {
 
             <div className="detail-products">
               <h3>Sản phẩm trong đơn</h3>
+
               <table className="detail-table">
                 <thead>
                   <tr>
@@ -89,22 +95,31 @@ const UserOrderDetailPage = () => {
                     <th>Thành tiền</th>
                   </tr>
                 </thead>
+
                 <tbody>
-                  {products.map((item, index) => (
-                    <tr key={index}>
-                      <td>{item.tensp || "Chưa xác định"}</td>
-                      <td>{item.mausac || "-"}</td>
-                      <td>{item.quantity || 0}</td>
-                      <td>{format(item.price)}</td>
-                      <td>{format(item.price * (item.quantity || 1))}</td>
-                    </tr>
-                  ))}
+                  {products.map((item, index) => {
+                    // ✅ FIX CHUẨN FIELD BACKEND
+                    const price = Number(item.gia || 0);
+                    const qty = Number(item.soluong || 0);
+
+                    return (
+                      <tr key={index}>
+                        <td>{item.tensp || "Chưa xác định"}</td>
+                        <td>{item.mausac || "-"}</td>
+                        <td>{qty}</td>
+                        <td>{format(price)}</td>
+                        <td>{format(price * qty)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
             <div className="detail-total">
-              <strong>Tổng tiền: {format(orderInfo.tongtien)}</strong>
+              <strong>
+                Tổng tiền: {format(Number(orderInfo.tongtien || 0))}
+              </strong>
             </div>
           </div>
         )}

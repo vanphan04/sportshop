@@ -5,7 +5,7 @@ import { format } from "utils/format";
 import "./style.scss";
 
 const OrderDetailPage = () => {
-  const { id } = useParams(); // id = mahd
+  const { id } = useParams();
 
   const [orderInfo, setOrderInfo] = useState(null);
   const [products, setProducts] = useState([]);
@@ -16,16 +16,20 @@ const OrderDetailPage = () => {
     const fetchOrderDetail = async () => {
       setLoading(true);
       setError(null);
+
       try {
         const res = await axios.get(
-          `https://sportshop.fly.dev/api/hoadon/${id}/chitiet`
+          `http://localhost:3001/api/hoadon/${id}/chitiet`
         );
+
         console.log("res.data:", res.data);
+
         if (res.data.info) {
           setOrderInfo(res.data.info);
         } else {
           throw new Error("Không tìm thấy thông tin hóa đơn");
         }
+
         setProducts(res.data.items || []);
       } catch (err) {
         console.error("Lỗi khi lấy chi tiết đơn hàng:", err);
@@ -47,6 +51,7 @@ const OrderDetailPage = () => {
   return (
     <div className="order-detail-page">
       <h2>Chi tiết đơn hàng #{orderInfo.mahd}</h2>
+
       <p>
         <b>Khách hàng:</b> {orderInfo.tenkh || "Chưa có thông tin"}
       </p>
@@ -58,7 +63,9 @@ const OrderDetailPage = () => {
       </p>
       <p>
         <b>Ngày đặt:</b>{" "}
-        {new Date(orderInfo.ngayxuat).toLocaleDateString("vi-VN")}
+        {orderInfo.ngayxuat
+          ? new Date(orderInfo.ngayxuat).toLocaleDateString("vi-VN")
+          : "Chưa có"}
       </p>
       <p>
         <b>Trạng thái:</b> {orderInfo.trangthai || "Chưa cập nhật"}
@@ -66,6 +73,7 @@ const OrderDetailPage = () => {
       <p>
         <b>Phương thức thanh toán:</b> {orderInfo.pttt || "Chưa cập nhật"}
       </p>
+
       {orderInfo.ghichu && (
         <p>
           <b>Ghi chú:</b> {orderInfo.ghichu}
@@ -73,6 +81,7 @@ const OrderDetailPage = () => {
       )}
 
       <h3>Sản phẩm:</h3>
+
       <table className="order-detail-table">
         <thead>
           <tr>
@@ -83,21 +92,30 @@ const OrderDetailPage = () => {
             <th>THÀNH TIỀN</th>
           </tr>
         </thead>
+
         <tbody>
-          {products.map((sp, i) => (
-            <tr key={i}>
-              <td>{sp.tensp || "Chưa xác định"}</td>
-              <td>{sp.mausac || "Chưa có"}</td>
-              <td>{sp.quantity || 0}</td>
-                            <td>{format(sp.price) || "0"}</td>
-              <td>{format(sp.price * (sp.quantity || 1)) || "0"}</td>
-            </tr>
-          ))}
+          {products.map((sp, i) => {
+            // 🔥 FIX QUAN TRỌNG
+            const price = Number(sp.gia || 0);
+            const qty = Number(sp.soluong || 0);
+
+            return (
+              <tr key={i}>
+                <td>{sp.tensp || "Chưa xác định"}</td>
+                <td>{sp.mausac || "Chưa có"}</td>
+                <td>{qty}</td>
+                <td>{format(price)}</td>
+                <td>{format(price * qty)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 
       <div className="order-detail-total">
-        <b>Tổng tiền: {format(orderInfo.tongtien) || "0"}</b>
+        <b>
+          Tổng tiền: {format(Number(orderInfo.tongtien || 0))}
+        </b>
       </div>
     </div>
   );

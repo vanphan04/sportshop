@@ -5,8 +5,8 @@ import "./style.scss";
 const ProductCategoryAdPage = () => {
   const [categories, setCategories] = useState([]);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [editId, setEditId] = useState(null);        // ID loại sản phẩm đang sửa
-  const [editName, setEditName] = useState("");      // Tên loại sản phẩm đang sửa
+  const [editId, setEditId] = useState(null); // ID loại sản phẩm đang sửa
+  const [editName, setEditName] = useState(""); // Tên loại sản phẩm đang sửa
 
   useEffect(() => {
     fetchCategories();
@@ -14,7 +14,7 @@ const ProductCategoryAdPage = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get("https://sportshop.fly.dev/api/loaisanpham");
+      const res = await axios.get("http://localhost:3001/api/loaisanpham");
       setCategories(res.data);
     } catch (err) {
       console.error("Lỗi khi tải loại sản phẩm:", err);
@@ -22,44 +22,42 @@ const ProductCategoryAdPage = () => {
   };
 
   const handleAddCategory = async () => {
-  if (!newCategoryName.trim()) {
-    alert("Vui lòng nhập tên loại sản phẩm");
-    return;
-  }
-
-  try {
-    await axios.post("https://sportshop.fly.dev/api/loaisanpham", {
-      tenloai: newCategoryName.trim(),
-    });
-    setNewCategoryName("");
-    fetchCategories();
-  } catch (err) {
-    if (err.response?.status === 409) {
-      alert("Tên loại sản phẩm đã tồn tại");
-    } else {
-      console.error("Lỗi khi thêm loại sản phẩm:", err);
-      alert("Đã xảy ra lỗi khi thêm loại sản phẩm");
+    if (!newCategoryName.trim()) {
+      alert("Vui lòng nhập tên loại sản phẩm");
+      return;
     }
-  }
-};
 
-
- const handleDeleteCategory = async (maloai) => {
-  if (!window.confirm("Bạn chắc chắn muốn xóa loại sản phẩm này?")) return;
-
-  try {
-    await axios.delete(`https://sportshop.fly.dev/api/loaisanpham/${maloai}`);
-    fetchCategories();
-  } catch (err) {
-    if (err.response?.status === 400) {
-      alert("Không thể xóa loại sản phẩm vì vẫn còn sản phẩm ");
-    } else {
-      console.error("Lỗi khi xóa loại sản phẩm:", err);
-      alert("Đã xảy ra lỗi khi xóa loại sản phẩm");
+    try {
+      await axios.post("http://localhost:3001/api/loaisanpham", {
+        tenloai: newCategoryName.trim(),
+      });
+      setNewCategoryName("");
+      fetchCategories();
+    } catch (err) {
+      if (err.response?.status === 409) {
+        alert("Tên loại sản phẩm đã tồn tại");
+      } else {
+        console.error("Lỗi khi thêm loại sản phẩm:", err);
+        alert("Đã xảy ra lỗi khi thêm loại sản phẩm");
+      }
     }
-  }
-};
+  };
 
+  const handleDeleteCategory = async (maloai) => {
+    if (!window.confirm("Bạn chắc chắn muốn xóa loại sản phẩm này?")) return;
+
+    try {
+      await axios.delete(`http://localhost:3001/api/loaisanpham/${maloai}`);
+      fetchCategories();
+    } catch (err) {
+      if (err.response?.status === 400) {
+        alert("Không thể xóa loại sản phẩm vì vẫn còn sản phẩm ");
+      } else {
+        console.error("Lỗi khi xóa loại sản phẩm:", err);
+        alert("Đã xảy ra lỗi khi xóa loại sản phẩm");
+      }
+    }
+  };
 
   // Bắt đầu chỉnh sửa một loại sản phẩm
   const handleEditClick = (maloai, tenloai) => {
@@ -74,30 +72,29 @@ const ProductCategoryAdPage = () => {
   };
 
   // Lưu tên loại sản phẩm đã chỉnh sửa
- const handleSaveEdit = async (maloai) => {
-  if (!editName.trim()) {
-    alert("Tên loại sản phẩm không được để trống");
-    return;
-  }
-
-  try {
-    await axios.put(`https://sportshop.fly.dev/api/loaisanpham/${maloai}`, {
-      tenloai: editName.trim(),
-    });
-
-    setEditId(null);
-    setEditName("");
-    fetchCategories();
-  } catch (err) {
-    if (err.response?.status === 409) {
-      alert("Tên loại sản phẩm đã tồn tại");
-    } else {
-      console.error("Lỗi khi cập nhật loại sản phẩm:", err);
-      alert("Đã xảy ra lỗi khi cập nhật loại sản phẩm");
+  const handleSaveEdit = async (maloai) => {
+    if (!editName.trim()) {
+      alert("Tên loại sản phẩm không được để trống");
+      return;
     }
-  }
-};
 
+    try {
+      await axios.put(`http://localhost:3001/api/loaisanpham/${maloai}`, {
+        tenloai: editName.trim(),
+      });
+
+      setEditId(null);
+      setEditName("");
+      fetchCategories();
+    } catch (err) {
+      if (err.response?.status === 409) {
+        alert("Tên loại sản phẩm đã tồn tại");
+      } else {
+        console.error("Lỗi khi cập nhật loại sản phẩm:", err);
+        alert("Đã xảy ra lỗi khi cập nhật loại sản phẩm");
+      }
+    }
+  };
 
   return (
     <div className="product-page">
@@ -139,14 +136,21 @@ const ProductCategoryAdPage = () => {
                 <td>
                   {editId === maloai ? (
                     <>
-                      <button onClick={() => handleSaveEdit(maloai)}>Lưu</button>
-                      <button onClick={handleCancelEdit} style={{ marginLeft: 8 }}>
+                      <button onClick={() => handleSaveEdit(maloai)}>
+                        Lưu
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        style={{ marginLeft: 8 }}
+                      >
                         Hủy
                       </button>
                     </>
                   ) : (
                     <>
-                      <button onClick={() => handleEditClick(maloai, tenloai)}>Sửa</button>
+                      <button onClick={() => handleEditClick(maloai, tenloai)}>
+                        Sửa
+                      </button>
                       <button
                         onClick={() => handleDeleteCategory(maloai)}
                         style={{ marginLeft: 8 }}

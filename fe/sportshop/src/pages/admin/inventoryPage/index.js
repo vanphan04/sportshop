@@ -28,7 +28,7 @@ const InventoryPage = () => {
   // ================= FETCH =================
   const fetchInventory = async () => {
     try {
-      const res = await axios.get("https://sportshop.fly.dev/api/tonkho");
+      const res = await axios.get("http://localhost:3001/api/tonkho");
       setInventory(res.data || []);
     } catch (err) {
       console.error("Lỗi inventory:", err);
@@ -37,7 +37,7 @@ const InventoryPage = () => {
 
   const fetchProducts = async () => {
     try {
-      const res = await axios.get("https://sportshop.fly.dev/api/sanpham");
+      const res = await axios.get("http://localhost:3001/api/sanpham");
       setProducts(res.data || []);
     } catch (err) {
       console.error("Lỗi products:", err);
@@ -46,7 +46,7 @@ const InventoryPage = () => {
 
   const fetchColors = async () => {
     try {
-      const res = await axios.get("https://sportshop.fly.dev/api/mausac");
+      const res = await axios.get("http://localhost:3001/api/mausac");
       setColors(res.data || []);
     } catch (err) {
       console.error("Lỗi colors:", err);
@@ -55,9 +55,7 @@ const InventoryPage = () => {
 
   const fetchProductTypes = async () => {
     try {
-      const res = await axios.get(
-        "https://sportshop.fly.dev/api/loaisanpham"
-      );
+      const res = await axios.get("http://localhost:3001/api/loaisanpham");
       setProductTypes(res.data || []);
     } catch (err) {
       console.error("Lỗi loại sản phẩm:", err);
@@ -75,14 +73,9 @@ const InventoryPage = () => {
     if (!selectedProductType) return true;
 
     // KHÔNG dùng find sai type nữa → convert thẳng
-    const product = products.find(
-      (p) => String(p.masp) === String(item.masp)
-    );
+    const product = products.find((p) => String(p.masp) === String(item.masp));
 
-    return (
-      product &&
-      String(product.maloai) === String(selectedProductType)
-    );
+    return product && String(product.maloai) === String(selectedProductType);
   });
 
   // ================= EDIT =================
@@ -100,7 +93,7 @@ const InventoryPage = () => {
     }
 
     try {
-      await axios.put("https://sportshop.fly.dev/api/tonkho", {
+      await axios.put("http://localhost:3001/api/tonkho", {
         ...editedQuantity,
         soluong,
       });
@@ -117,9 +110,7 @@ const InventoryPage = () => {
     if (!window.confirm("Bạn có chắc muốn xóa?")) return;
 
     try {
-      await axios.delete(
-        `https://sportshop.fly.dev/api/tonkho/${variant_id}`
-      );
+      await axios.delete(`http://localhost:3001/api/tonkho/${variant_id}`);
       fetchInventory();
     } catch (err) {
       console.error("Lỗi delete:", err);
@@ -136,7 +127,7 @@ const InventoryPage = () => {
     }
 
     try {
-      await axios.post("https://sportshop.fly.dev/api/tonkho", {
+      await axios.post("http://localhost:3001/api/tonkho", {
         ...newEntry,
         soluong,
       });
@@ -171,9 +162,7 @@ const InventoryPage = () => {
           {/* PRODUCTS */}
           <select
             value={newEntry.masp}
-            onChange={(e) =>
-              setNewEntry({ ...newEntry, masp: e.target.value })
-            }
+            onChange={(e) => setNewEntry({ ...newEntry, masp: e.target.value })}
           >
             <option value="">Chọn sản phẩm</option>
             {filteredProducts.map((p) => (
@@ -201,9 +190,7 @@ const InventoryPage = () => {
           {/* SIZE */}
           <select
             value={newEntry.size}
-            onChange={(e) =>
-              setNewEntry({ ...newEntry, size: e.target.value })
-            }
+            onChange={(e) => setNewEntry({ ...newEntry, size: e.target.value })}
           >
             <option value="">Không có size</option>
             <option value="S">S</option>
@@ -275,13 +262,7 @@ const InventoryPage = () => {
                       ) : (
                         <button
                           onClick={() =>
-                            handleEdit(
-                              variant_id,
-                              masp,
-                              tenmau,
-                              size,
-                              soluong
-                            )
+                            handleEdit(variant_id, masp, tenmau, size, soluong)
                           }
                         >
                           Sửa
@@ -294,7 +275,7 @@ const InventoryPage = () => {
                     </td>
                   </tr>
                 );
-              }
+              },
             )}
           </tbody>
         </table>

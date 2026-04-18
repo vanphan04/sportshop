@@ -91,17 +91,31 @@ app.post("/api/user/signup", async (req, res) => {
 
   try {
     if (!tenkh || !email || !password) {
-      return res.status(400).json({ error: "Thiếu thông tin bắt buộc" });
+      return res.status(400).json({ error: "Thiếu thông tin" });
     }
 
-    // check email tồn tại
-    const checkUser = await db.query(
+    const phone = sdt ? String(sdt).trim() : "";
+
+    // 🔥 1. check email tồn tại
+    const checkEmail = await db.query(
       "SELECT * FROM khachhang WHERE email = $1",
       [email]
     );
 
-    if (checkUser.rows.length > 0) {
-      return res.status(409).json({ error: "Email đã được đăng ký" });
+    if (checkEmail.rows.length > 0) {
+      return res.status(409).json({ error: "Email đã tồn tại" });
+    }
+
+    // 🔥 2. check SĐT tồn tại (MỚI THÊM)
+    if (phone) {
+      const checkPhone = await db.query(
+        "SELECT * FROM khachhang WHERE sdt = $1",
+        [phone]
+      );
+
+      if (checkPhone.rows.length > 0) {
+        return res.status(409).json({ error: "Số điện thoại đã tồn tại" });
+      }
     }
 
     // hash password
@@ -111,11 +125,10 @@ app.post("/api/user/signup", async (req, res) => {
     await db.query(
       `INSERT INTO khachhang (tenkh, email, sdt, password)
        VALUES ($1, $2, $3, $4)`,
-      [tenkh, email, sdt || "", hashedPassword]
+      [tenkh, email, phone, hashedPassword]
     );
 
-    res.json({ message: "Đăng ký thành công" });
-
+    res.json({ message: "OK" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Lỗi server" });
@@ -1112,28 +1125,27 @@ app.delete("/api/tonkho/:masp/:mamau", async (req, res) => {
 app.get("/api/hoadon/sdt/:sdt", async (req, res) => {
   const { sdt } = req.params;
 
+
   try {
     const result = await db.query(
       `
-      SELECT 
-        hd.mahd,
-        hd.ngayxuat,
-        hd.tongtien,
-        hd.trangthai,
-        hd.sdt_nguoinhan,
-        kh.tenkh
+      SELECT hd.mahd, hd.ngayxuat, hd.tongtien, hd.trangthai, kh.sdt, kh.tenkh
       FROM hoadon hd
       LEFT JOIN khachhang kh ON hd.makh = kh.makh
-      WHERE hd.sdt_nguoinhan = $1
+      WHERE kh.sdt = $1
       ORDER BY hd.mahd DESC
       `,
       [sdt]
     );
 
-    res.json(result.rows);
 
+    res.json(result.rows);
   } catch (err) {
-    console.error("Lỗi lấy đơn hàng theo SĐT:", err);
+    console.error("❌ Lỗi lấy hóa đơn:");
+    console.error("Message:", err.message);
+    console.error("Detail:", err.detail);
+    console.error("Stack:", err.stack);
+
     res.status(500).json({ error: "Lỗi server" });
   }
 });
@@ -1149,7 +1161,6 @@ app.get("/api/hoadon/:id/chitiet", async (req, res) => {
         hd.ngayxuat,
         hd.tongtien,
         hd.trangthai,
-        hd.ghichu,
         hd.pttt,
         hd.thanhtoan,
         kh.tenkh,
@@ -1163,8 +1174,11 @@ app.get("/api/hoadon/:id/chitiet", async (req, res) => {
             'mausac', ms.tenmau,
             'hex_code', ms.hex_code,
             'image', ms.image,
-            'soluong', ct.quantity,
-            'gia', ct.price
+
+            -- 🔥 FIX QUAN TRỌNG
+            'gia', ct.price,
+            'soluong', ct.quantity
+
           )
         ) AS items
 
@@ -1193,7 +1207,6 @@ app.get("/api/hoadon/:id/chitiet", async (req, res) => {
         ngayxuat: data.ngayxuat,
         tongtien: data.tongtien,
         trangthai: data.trangthai,
-        ghichu: data.ghichu,
         pttt: data.pttt,
         thanhtoan: data.thanhtoan,
         tenkh: data.tenkh,
@@ -1210,71 +1223,62 @@ app.get("/api/hoadon/:id/chitiet", async (req, res) => {
 });
 
 //Thanh toán
-app.post("/api/checkout", async (req, res) => {
-  const connection = require("./connectDB/db");
+const pool = require("./connectDB/db"); // pool pg
 
+app.post("/api/checkout", async (req, res) => {
   try {
     const {
-      tenkh,
-      sdt,
-      email,
-      diachi,
-      ghichu,
       items,
       pttt,
       tongtien,
-      makh // 👈 THÊM
+      makh
     } = req.body;
 
-    const conn = connection.promise();
-
-    // 1. Tạo hóa đơn (THÊM makh)
-    const [hoadonResult] = await conn.query(
+    // 1. tạo hóa đơn (ĐÚNG THEO TABLE CỦA BẠN)
+    const hoadonResult = await pool.query(
       `INSERT INTO hoadon 
-      (makh, tennguoinhan, sdt_nguoinhan, diachi_giaohang, ghichu, tongtien, pttt)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [makh, tenkh, sdt, diachi, ghichu, tongtien, pttt]
+      (makh, tongtien, pttt, trangthai, thanhtoan)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING mahd`,
+      [makh, tongtien, pttt, 'Chờ xử lý', 'Chưa thanh toán']
     );
 
-    const mahd = hoadonResult.insertId;
+    const mahd = hoadonResult.rows[0].mahd;
 
-    // 2. Xử lý từng sản phẩm
+    // 2. xử lý từng sản phẩm
     for (const item of items) {
       const { masp, variant_id, mamau, size, quantity } = item;
 
-      const [rows] = await conn.query(
+      const rows = await pool.query(
         `SELECT sp.gia, v.stock
          FROM sanpham sp
          JOIN sanpham_variant v ON sp.masp = v.masp
-         WHERE sp.masp = ? AND v.id = ?`,
+         WHERE sp.masp = $1 AND v.id = $2`,
         [masp, variant_id]
       );
 
-      if (rows.length === 0) {
-        throw new Error(`Không tìm thấy sản phẩm variant`);
+      if (rows.rows.length === 0) {
+        throw new Error("Không tìm thấy sản phẩm variant");
       }
 
-      const gia = rows[0].gia;
-      const stock = rows[0].stock;
+      const gia = rows.rows[0].gia;
+      const stock = rows.rows[0].stock;
 
-      // Check tồn kho
       if (stock < quantity) {
         throw new Error(`Sản phẩm ID ${masp} không đủ hàng`);
       }
 
-      // Insert chi tiết hóa đơn
-      await conn.query(
+      await pool.query(
         `INSERT INTO chitiethoadon
         (mahd, masp, variant_id, mamau, size, quantity, price)
-        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        VALUES ($1,$2,$3,$4,$5,$6,$7)`,
         [mahd, masp, variant_id, mamau, size, quantity, gia]
       );
 
-      // Trừ kho
-      await conn.query(
+      await pool.query(
         `UPDATE sanpham_variant
-         SET stock = stock - ?
-         WHERE id = ?`,
+         SET stock = stock - $1
+         WHERE id = $2`,
         [quantity, variant_id]
       );
     }
@@ -1621,80 +1625,43 @@ app.post("/api/sanpham", async (req, res) => {
   }
 });
 
-// Tìm đơn hàng theo số điện thoại
-
 // PUT: Cập nhật sản phẩm
-app.put("/api/sanpham/:id", async (req, res) => {
+app.get("/api/sanpham/:id", async (req, res) => {
   const { id } = req.params;
-  const { tensp, hinhanh, gia, mota, maloai, madm } = req.body;
-
-  // ================= VALIDATE =================
-  if (!tensp || !hinhanh || !gia || !mota || !maloai || !madm) {
-    return res.status(400).json({
-      error: "Vui lòng nhập đầy đủ thông tin sản phẩm",
-    });
-  }
-
-  if (isNaN(gia) || Number(gia) <= 0) {
-    return res.status(400).json({
-      error: "Giá sản phẩm phải là số lớn hơn 0",
-    });
-  }
 
   try {
-    // ================= CHECK TRÙNG (KHÁC ID) =================
-    const exist = await pool.query(
-      `SELECT masp 
-       FROM sanpham 
-       WHERE tensp = $1 AND masp != $2 
-       LIMIT 1`,
-      [tensp.trim(), id]
-    );
-
-    if (exist.rows.length > 0) {
-      return res.status(409).json({
-        error: "Tên sản phẩm đã tồn tại",
-      });
-    }
-
-    // ================= UPDATE =================
     const result = await pool.query(
-      `UPDATE sanpham
-       SET tensp = $1,
-           hinhanh = $2,
-           gia = $3,
-           mota = $4,
-           maloai = $5,
-           madm = $6
-       WHERE masp = $7
-       RETURNING masp`,
-      [
-        tensp.trim(),
-        hinhanh.trim(),
-        Number(gia),
-        mota.trim(),
-        maloai,
-        madm,
-        id,
-      ]
+      `
+      SELECT 
+        sp.masp,
+        sp.tensp,
+        sp.gia,
+        sp.hinhanh,
+        sp.mota,
+        sp.maloai,
+        sp.madm,
+        l.tenloai,
+        dm.tendm
+      FROM sanpham sp
+      LEFT JOIN loai l ON sp.maloai = l.maloai
+      LEFT JOIN danhmuc dm ON sp.madm = dm.madm
+      WHERE sp.masp = $1
+      `,
+      [id]
     );
 
-    if (result.rowCount === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({
         error: "Không tìm thấy sản phẩm",
       });
     }
 
-    return res.status(200).json({
-      message: "Cập nhật sản phẩm thành công",
-      masp: result.rows[0].masp,
-    });
+    res.json(result.rows[0]);
 
   } catch (err) {
-    console.error("🔥 PostgreSQL update error:", err);
-
-    return res.status(500).json({
-      error: "Lỗi server khi cập nhật sản phẩm",
+    console.error("Lỗi lấy sản phẩm:", err);
+    res.status(500).json({
+      error: "Lỗi server",
     });
   }
 });

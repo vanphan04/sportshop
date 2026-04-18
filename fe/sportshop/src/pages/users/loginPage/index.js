@@ -21,7 +21,7 @@ const UserLoginPage = () => {
         return;
       }
 
-      const res = await axios.post("https://sportshop.fly.dev/api/user/login", {
+      const res = await axios.post("http://localhost:3001/api/user/login", {
         email,
         password,
       });
@@ -48,7 +48,9 @@ const UserLoginPage = () => {
       <div className="login-container">
         <div className="login-box">
           <h2 className="login-title">ĐĂNG NHẬP</h2>
-          <p className="login-subtitle">Chào mừng trở lại! Vui lòng nhập thông tin của bạn</p>
+          <p className="login-subtitle">
+            Chào mừng trở lại! Vui lòng nhập thông tin của bạn
+          </p>
           <form className="login-form" onSubmit={handleSubmit}>
             <div className="form-group">
               <label htmlFor="email">Email</label>
@@ -77,7 +79,8 @@ const UserLoginPage = () => {
             </button>
           </form>
           <p className="login-footer">
-            Chưa có tài khoản? <Link to={ROUTERS.USER.SIGNUP}>Đăng ký tại đây</Link>
+            Chưa có tài khoản?{" "}
+            <Link to={ROUTERS.USER.SIGNUP}>Đăng ký tại đây</Link>
           </p>
         </div>
       </div>

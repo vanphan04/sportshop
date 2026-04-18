@@ -6,7 +6,8 @@ const ProductList = () => {
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    axios.get("https://sportshop.fly.dev/api/sanpham")
+    axios
+      .get("http://localhost:3001/api/sanpham")
       .then((res) => {
         setProducts(res.data);
       })
@@ -19,11 +20,7 @@ const ProductList = () => {
     <div className="row">
       {products.map((item) => (
         <div key={item.masp} className="col-lg-4 col-md-6 col-sm-6">
-          <ProductCard
-            img={item.hinhanh}
-            name={item.tensp}
-            price={item.gia}
-          />
+          <ProductCard img={item.hinhanh} name={item.tensp} price={item.gia} />
         </div>
       ))}
     </div>

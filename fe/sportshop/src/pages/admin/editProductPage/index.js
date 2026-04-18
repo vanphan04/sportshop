@@ -17,7 +17,7 @@ const EditProductPage = () => {
       mota: "",
       maloai: "",
       madm: "",
-    }
+    },
   );
 
   const [categories, setCategories] = useState([]);
@@ -27,7 +27,7 @@ const EditProductPage = () => {
   useEffect(() => {
     if (masp && !state?.product) {
       axios
-        .get(`https://sportshop.fly.dev/api/sanpham/${masp}`)
+        .get(`http://localhost:3001/api/sanpham/${masp}`)
         .then((res) => setProduct(res.data))
         .catch((err) => console.error("Lỗi khi tải sản phẩm:", err));
     }
@@ -35,11 +35,13 @@ const EditProductPage = () => {
 
   // Load danh mục và loại sản phẩm
   useEffect(() => {
-    axios.get("https://sportshop.fly.dev/api/danhmuc")
+    axios
+      .get("http://localhost:3001/api/danhmuc")
       .then((res) => setCategories(res.data))
       .catch((err) => console.error("Lỗi khi tải danh mục:", err));
 
-    axios.get("https://sportshop.fly.dev/api/loaisanpham")
+    axios
+      .get("http://localhost:3001/api/loaisanpham")
       .then((res) => setTypes(res.data))
       .catch((err) => console.error("Lỗi khi tải loại sản phẩm:", err));
   }, []);
@@ -63,7 +65,7 @@ const EditProductPage = () => {
     }
 
     try {
-      await axios.put(`https://sportshop.fly.dev/api/sanpham/${masp}`, {
+      await axios.put(`http://localhost:3001/api/sanpham/${masp}`, {
         tensp: tensp.trim(),
         hinhanh,
         gia: parseInt(gia),
@@ -132,7 +134,12 @@ const EditProductPage = () => {
           rows="4"
         />
         <div className="option">
-          <select name="maloai" value={product.maloai} onChange={handleChange} required>
+          <select
+            name="maloai"
+            value={product.maloai}
+            onChange={handleChange}
+            required
+          >
             <option value="">-- Chọn loại sản phẩm --</option>
             {types.map((loai) => (
               <option key={loai.maloai} value={loai.maloai}>
@@ -140,7 +147,12 @@ const EditProductPage = () => {
               </option>
             ))}
           </select>
-          <select name="madm" value={product.madm} onChange={handleChange} required>
+          <select
+            name="madm"
+            value={product.madm}
+            onChange={handleChange}
+            required
+          >
             <option value="">-- Chọn danh mục --</option>
             {categories.map((dm) => (
               <option key={dm.madm} value={dm.madm}>
@@ -151,7 +163,10 @@ const EditProductPage = () => {
         </div>
         <div className="form-buttons">
           <button onClick={handleSubmit}>Lưu thay đổi</button>
-          <button onClick={() => navigate("/quan-tri/san-pham")} style={{ marginLeft: 10 }}>
+          <button
+            onClick={() => navigate("/quan-tri/san-pham")}
+            style={{ marginLeft: 10 }}
+          >
             Quay lại
           </button>
         </div>

@@ -14,7 +14,7 @@ const DmPage = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get("https://sportshop.fly.dev/api/danhmuc");
+      const res = await axios.get("http://localhost:3001/api/danhmuc");
       setCategories(res.data);
     } catch (err) {
       console.error("Lỗi khi tải danh mục:", err);
@@ -28,7 +28,7 @@ const DmPage = () => {
     }
 
     try {
-      await axios.post("https://sportshop.fly.dev/api/danhmuc", {
+      await axios.post("http://localhost:3001/api/danhmuc", {
         tendm: newCategoryName.trim(),
       });
       setNewCategoryName("");
@@ -47,7 +47,7 @@ const DmPage = () => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa danh mục này?")) return;
 
     try {
-      await axios.delete(`https://sportshop.fly.dev/api/danhmuc/${madm}`);
+      await axios.delete(`http://localhost:3001/api/danhmuc/${madm}`);
       fetchCategories();
     } catch (err) {
       if (err.response?.status === 400) {
@@ -76,7 +76,7 @@ const DmPage = () => {
     }
 
     try {
-      await axios.put(`https://sportshop.fly.dev/api/danhmuc/${madm}`, {
+      await axios.put(`http://localhost:3001/api/danhmuc/${madm}`, {
         tendm: editName.trim(),
       });
 
@@ -95,7 +95,6 @@ const DmPage = () => {
 
   return (
     <div className="admin-container">
-      
       <div className="product-category-ad-page container">
         <h2>Quản lý danh mục</h2>
 
@@ -135,13 +134,18 @@ const DmPage = () => {
                   {editId === madm ? (
                     <>
                       <button onClick={() => handleSaveEdit(madm)}>Lưu</button>
-                      <button onClick={handleCancelEdit} style={{ marginLeft: 8 }}>
+                      <button
+                        onClick={handleCancelEdit}
+                        style={{ marginLeft: 8 }}
+                      >
                         Hủy
                       </button>
                     </>
                   ) : (
                     <>
-                      <button onClick={() => handleEditClick(madm, tendm)}>Sửa</button>
+                      <button onClick={() => handleEditClick(madm, tendm)}>
+                        Sửa
+                      </button>
                       <button
                         onClick={() => handleDeleteCategory(madm)}
                         style={{ marginLeft: 8 }}

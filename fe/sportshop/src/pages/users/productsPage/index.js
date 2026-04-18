@@ -1,4 +1,3 @@
-
 import axios from "axios";
 import { ProductCard } from "component";
 import { memo, useEffect, useMemo, useState } from "react";
@@ -6,8 +5,7 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import Breadcrumb from "../theme/breadcrumb";
 import "./style.scss";
 
-const BASE_URL =
-  process.env.REACT_APP_API_URL || "https://sportshop.fly.dev"; 
+const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
 
 const ProductsPage = () => {
   const sorts = ["Giảm dần", "Tăng dần"];
@@ -32,7 +30,7 @@ const ProductsPage = () => {
 
         if (keyword) {
           endpoint = `${BASE_URL}/api/sanpham/timkiem?keyword=${encodeURIComponent(
-            keyword
+            keyword,
           )}`;
         } else if (madm) {
           endpoint = `${BASE_URL}/api/sanpham/danhmuc/${madm}`;
@@ -72,9 +70,7 @@ const ProductsPage = () => {
     const min = parseInt(minPrice) || 0;
     const max = parseInt(maxPrice) || Infinity;
 
-    const result = allProducts.filter(
-      (sp) => sp.gia >= min && sp.gia <= max
-    );
+    const result = allProducts.filter((sp) => sp.gia >= min && sp.gia <= max);
 
     setFilteredProducts(result);
   };
@@ -139,9 +135,7 @@ const ProductsPage = () => {
                   {sorts.map((item) => (
                     <div
                       key={item}
-                      className={`tag ${
-                        selectedSort === item ? "active" : ""
-                      }`}
+                      className={`tag ${selectedSort === item ? "active" : ""}`}
                       onClick={() => setSelectedSort(item)}
                       style={{ cursor: "pointer" }}
                     >
@@ -159,9 +153,7 @@ const ProductsPage = () => {
                     <li key={cat.madm}>
                       <Link
                         to={`/san-pham/danh-muc/${cat.madm}`}
-                        className={
-                          madm === String(cat.madm) ? "active" : ""
-                        }
+                        className={madm === String(cat.madm) ? "active" : ""}
                       >
                         {cat.tendm}
                       </Link>
@@ -198,4 +190,3 @@ const ProductsPage = () => {
 };
 
 export default memo(ProductsPage);
-

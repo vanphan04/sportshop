@@ -13,18 +13,19 @@ const LoginPage = () => {
     e.preventDefault();
 
     try {
-      await axios.post("https://sportshop.fly.dev/api/admin/login", {
-  username,
-  password
-});
-
+      await axios.post("http://localhost:3001/api/admin/login", {
+        username,
+        password,
+      });
 
       alert("Đăng nhập thành công!");
       // TODO: có thể lưu thông tin vào localStorage nếu cần
       navigate(ROUTERS.ADMIN.ORDERS);
     } catch (err) {
       if (err.response?.status === 401) {
-        alert(err.response.data.error || "Tên đăng nhập hoặc mật khẩu không đúng!");
+        alert(
+          err.response.data.error || "Tên đăng nhập hoặc mật khẩu không đúng!",
+        );
       } else {
         alert("Lỗi hệ thống khi đăng nhập!");
         console.error("Lỗi đăng nhập:", err);
@@ -38,7 +39,9 @@ const LoginPage = () => {
         <h2 className="login__tittle">HỆ THỐNG QUẢN TRỊ</h2>
         <form className="login__form" onSubmit={handleSubmit}>
           <div className="login__form-group">
-            <label htmlFor="username" className="login__label">Tên đăng nhập</label>
+            <label htmlFor="username" className="login__label">
+              Tên đăng nhập
+            </label>
             <input
               type="text"
               name="username"
@@ -47,7 +50,9 @@ const LoginPage = () => {
             />
           </div>
           <div className="login__form-group">
-            <label htmlFor="password" className="login__label">Mật khẩu</label>
+            <label htmlFor="password" className="login__label">
+              Mật khẩu
+            </label>
             <input
               type="password"
               name="password"
@@ -55,7 +60,9 @@ const LoginPage = () => {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <button type="submit" className="login__btn">ĐĂNG NHẬP</button>
+          <button type="submit" className="login__btn">
+            ĐĂNG NHẬP
+          </button>
         </form>
       </div>
     </div>

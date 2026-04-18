@@ -16,7 +16,7 @@ const ProductAdPage = () => {
 
   const fetchProducts = async () => {
     try {
-      const res = await axios.get("https://sportshop.fly.dev/api/sanpham");
+      const res = await axios.get("http://localhost:3001/api/sanpham");
       setProducts(res.data);
     } catch (err) {
       console.error("Lỗi khi tải sản phẩm:", err);
@@ -26,8 +26,8 @@ const ProductAdPage = () => {
   const fetchOptions = async () => {
     try {
       const [loai, dm] = await Promise.all([
-        axios.get("https://sportshop.fly.dev/api/loaisanpham"),
-        axios.get("https://sportshop.fly.dev/api/danhmuc"),
+        axios.get("http://localhost:3001/api/loaisanpham"),
+        axios.get("http://localhost:3001/api/danhmuc"),
       ]);
       setLoaiSP(loai.data);
       setDanhMuc(dm.data);
@@ -40,7 +40,7 @@ const ProductAdPage = () => {
     if (!window.confirm("Bạn chắc chắn muốn xóa sản phẩm này?")) return;
 
     try {
-      await axios.delete(`https://sportshop.fly.dev/api/sanpham/${masp}`);
+      await axios.delete(`http://localhost:3001/api/sanpham/${masp}`);
       alert("Xóa sản phẩm thành công");
       fetchProducts(); // reload lại danh sách
     } catch (error) {
@@ -84,13 +84,9 @@ const ProductAdPage = () => {
                 <td>{sp.hinhanh}</td>
                 <td>{sp.gia}</td>
 
-                <td>
-                  {getTenById(loaisp, "maloai", sp.maloai, "tenloai")}
-                </td>
+                <td>{getTenById(loaisp, "maloai", sp.maloai, "tenloai")}</td>
 
-                <td>
-                  {getTenById(danhmuc, "madm", sp.madm, "tendm")}
-                </td>
+                <td>{getTenById(danhmuc, "madm", sp.madm, "tendm")}</td>
 
                 <td>
                   <Link
