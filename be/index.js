@@ -1757,8 +1757,8 @@ app.put("/api/khachhang/update/:sdt", async (req, res) => {
 });
 
 // ================= SERVER =================
-const PORT = 3001;
+const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, () => {
-  console.log(`Server đang chạy tại http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on ${PORT}`);
 });
