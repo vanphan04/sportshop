@@ -28,7 +28,7 @@ const InventoryPage = () => {
   // ================= FETCH =================
   const fetchInventory = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/api/tonkho");
+      const res = await axios.get("https://sportshop.fly.dev/api/tonkho");
       setInventory(res.data || []);
     } catch (err) {
       console.error("Lỗi inventory:", err);
@@ -37,7 +37,7 @@ const InventoryPage = () => {
 
   const fetchProducts = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/api/sanpham");
+      const res = await axios.get("https://sportshop.fly.dev/api/sanpham");
       setProducts(res.data || []);
     } catch (err) {
       console.error("Lỗi products:", err);
@@ -46,7 +46,7 @@ const InventoryPage = () => {
 
   const fetchColors = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/api/mausac");
+      const res = await axios.get("https://sportshop.fly.dev/api/mausac");
       setColors(res.data || []);
     } catch (err) {
       console.error("Lỗi colors:", err);
@@ -55,7 +55,7 @@ const InventoryPage = () => {
 
   const fetchProductTypes = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/api/loaisanpham");
+      const res = await axios.get("https://sportshop.fly.dev/api/loaisanpham");
       setProductTypes(res.data || []);
     } catch (err) {
       console.error("Lỗi loại sản phẩm:", err);
@@ -93,7 +93,7 @@ const InventoryPage = () => {
     }
 
     try {
-      await axios.put("http://localhost:3001/api/tonkho", {
+      await axios.put("https://sportshop.fly.dev/api/tonkho", {
         ...editedQuantity,
         soluong,
       });
@@ -110,7 +110,7 @@ const InventoryPage = () => {
     if (!window.confirm("Bạn có chắc muốn xóa?")) return;
 
     try {
-      await axios.delete(`http://localhost:3001/api/tonkho/${variant_id}`);
+      await axios.delete(`https://sportshop.fly.dev/api/tonkho/${variant_id}`);
       fetchInventory();
     } catch (err) {
       console.error("Lỗi delete:", err);
@@ -127,7 +127,7 @@ const InventoryPage = () => {
     }
 
     try {
-      await axios.post("http://localhost:3001/api/tonkho", {
+      await axios.post("https://sportshop.fly.dev/api/tonkho", {
         ...newEntry,
         soluong,
       });

@@ -7,7 +7,7 @@ const ProductList = () => {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3001/api/sanpham")
+      .get("https://sportshop.fly.dev/api/sanpham")
       .then((res) => {
         setProducts(res.data);
       })

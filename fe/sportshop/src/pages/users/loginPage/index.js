@@ -21,7 +21,7 @@ const UserLoginPage = () => {
         return;
       }
 
-      const res = await axios.post("http://localhost:3001/api/user/login", {
+      const res = await axios.post("https://sportshop.fly.dev/api/user/login", {
         email,
         password,
       });

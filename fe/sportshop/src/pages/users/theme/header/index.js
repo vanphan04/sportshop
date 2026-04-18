@@ -123,7 +123,9 @@ const Header = () => {
   useEffect(() => {
     const fetchLoaiSanPham = async () => {
       try {
-        const res = await axios.get("http://localhost:3001/api/loaisanpham");
+        const res = await axios.get(
+          "https://sportshop.fly.dev/api/loaisanpham",
+        );
         setLoaiSanPham(res.data);
       } catch (err) {
         console.error("Lỗi tải loại sản phẩm: ", err);
@@ -136,7 +138,7 @@ const Header = () => {
   useEffect(() => {
     const fetchDanhMuc = async () => {
       try {
-        const res = await axios.get("http://localhost:3001/api/danhmuc");
+        const res = await axios.get("https://sportshop.fly.dev/api/danhmuc");
         setDanhMucSanPham(res.data);
       } catch (err) {
         console.error("Lỗi tải danh mục sản phẩm: ", err);

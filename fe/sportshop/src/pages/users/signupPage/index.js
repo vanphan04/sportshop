@@ -57,7 +57,7 @@ const UserSignupPage = () => {
         return;
       }
 
-      await axios.post("http://localhost:3001/api/user/signup", {
+      await axios.post("https://sportshop.fly.dev/api/user/signup", {
         tenkh: formData.name,
         email: formData.email,
         sdt: phone, // 🔥 FIX QUAN TRỌNG

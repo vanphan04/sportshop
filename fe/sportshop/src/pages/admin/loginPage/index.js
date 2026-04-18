@@ -13,7 +13,7 @@ const LoginPage = () => {
     e.preventDefault();
 
     try {
-      await axios.post("http://localhost:3001/api/admin/login", {
+      await axios.post("https://sportshop.fly.dev/api/admin/login", {
         username,
         password,
       });

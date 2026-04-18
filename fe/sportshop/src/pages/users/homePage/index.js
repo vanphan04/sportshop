@@ -46,7 +46,7 @@ const HomePage = () => {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3001/api/sanpham")
+      .get("https://sportshop.fly.dev/api/sanpham")
       .then((res) => {
         const mapped = res.data.map((sp) => ({
           id: sp.masp,

@@ -19,7 +19,7 @@ const OrderDetailPage = () => {
 
       try {
         const res = await axios.get(
-          `http://localhost:3001/api/hoadon/${id}/chitiet`
+          `https://sportshop.fly.dev/api/hoadon/${id}/chitiet`,
         );
 
         console.log("res.data:", res.data);
@@ -34,7 +34,7 @@ const OrderDetailPage = () => {
       } catch (err) {
         console.error("Lỗi khi lấy chi tiết đơn hàng:", err);
         setError(
-          err.response?.data?.error || "Không thể tải chi tiết đơn hàng"
+          err.response?.data?.error || "Không thể tải chi tiết đơn hàng",
         );
       } finally {
         setLoading(false);
@@ -113,9 +113,7 @@ const OrderDetailPage = () => {
       </table>
 
       <div className="order-detail-total">
-        <b>
-          Tổng tiền: {format(Number(orderInfo.tongtien || 0))}
-        </b>
+        <b>Tổng tiền: {format(Number(orderInfo.tongtien || 0))}</b>
       </div>
     </div>
   );

@@ -14,7 +14,7 @@ const ProductCategoryAdPage = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/api/loaisanpham");
+      const res = await axios.get("https://sportshop.fly.dev/api/loaisanpham");
       setCategories(res.data);
     } catch (err) {
       console.error("Lỗi khi tải loại sản phẩm:", err);
@@ -28,7 +28,7 @@ const ProductCategoryAdPage = () => {
     }
 
     try {
-      await axios.post("http://localhost:3001/api/loaisanpham", {
+      await axios.post("https://sportshop.fly.dev/api/loaisanpham", {
         tenloai: newCategoryName.trim(),
       });
       setNewCategoryName("");
@@ -47,7 +47,7 @@ const ProductCategoryAdPage = () => {
     if (!window.confirm("Bạn chắc chắn muốn xóa loại sản phẩm này?")) return;
 
     try {
-      await axios.delete(`http://localhost:3001/api/loaisanpham/${maloai}`);
+      await axios.delete(`https://sportshop.fly.dev/api/loaisanpham/${maloai}`);
       fetchCategories();
     } catch (err) {
       if (err.response?.status === 400) {
@@ -79,7 +79,7 @@ const ProductCategoryAdPage = () => {
     }
 
     try {
-      await axios.put(`http://localhost:3001/api/loaisanpham/${maloai}`, {
+      await axios.put(`https://sportshop.fly.dev/api/loaisanpham/${maloai}`, {
         tenloai: editName.trim(),
       });
 

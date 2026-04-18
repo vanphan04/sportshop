@@ -36,7 +36,7 @@ const TrackOrderPage = () => {
 
       try {
         const res = await axios.get(
-          `http://localhost:3001/api/hoadon/sdt/${encodeURIComponent(user.sdt)}`,
+          `https://sportshop.fly.dev/api/hoadon/sdt/${encodeURIComponent(user.sdt)}`,
         );
         setOrders(res.data || []);
       } catch (err) {

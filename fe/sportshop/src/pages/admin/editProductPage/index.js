@@ -27,7 +27,7 @@ const EditProductPage = () => {
   useEffect(() => {
     if (masp && !state?.product) {
       axios
-        .get(`http://localhost:3001/api/sanpham/${masp}`)
+        .get(`https://sportshop.fly.dev/api/sanpham/${masp}`)
         .then((res) => setProduct(res.data))
         .catch((err) => console.error("Lỗi khi tải sản phẩm:", err));
     }
@@ -36,12 +36,12 @@ const EditProductPage = () => {
   // Load danh mục và loại sản phẩm
   useEffect(() => {
     axios
-      .get("http://localhost:3001/api/danhmuc")
+      .get("https://sportshop.fly.dev/api/danhmuc")
       .then((res) => setCategories(res.data))
       .catch((err) => console.error("Lỗi khi tải danh mục:", err));
 
     axios
-      .get("http://localhost:3001/api/loaisanpham")
+      .get("https://sportshop.fly.dev/api/loaisanpham")
       .then((res) => setTypes(res.data))
       .catch((err) => console.error("Lỗi khi tải loại sản phẩm:", err));
   }, []);
@@ -65,7 +65,7 @@ const EditProductPage = () => {
     }
 
     try {
-      await axios.put(`http://localhost:3001/api/sanpham/${masp}`, {
+      await axios.put(`https://sportshop.fly.dev/api/sanpham/${masp}`, {
         tensp: tensp.trim(),
         hinhanh,
         gia: parseInt(gia),
